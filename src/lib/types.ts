@@ -68,6 +68,13 @@ export interface AppKeys {
   tmdbKey?: string | null;
 }
 
+export interface AppShortcuts {
+  globalSearch: string;
+  togglePinned: string;
+  refreshDetails: string;
+  openImdb: string;
+}
+
 export interface ProviderStatus {
   ok: boolean;
   message?: string;

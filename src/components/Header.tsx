@@ -12,7 +12,6 @@ export function Header() {
     <div className="flex items-center justify-between px-5 pt-4">
       <div>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">MediaPedia</p>
-        <p className="text-lg font-semibold">Instant film & TV metadata</p>
       </div>
       <div className="flex items-center gap-2">
         <Button

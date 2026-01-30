@@ -18,6 +18,7 @@ const appWindow = getCurrentWindow();
 function App() {
   const init = useAppStore((state) => state.init);
   const view = useAppStore((state) => state.view);
+  const shortcuts = useAppStore((state) => state.shortcuts);
   const suggestions = useAppStore((state) => state.suggestions);
   const selectionIndex = useAppStore((state) => state.selectionIndex);
   const setSelectionIndex = useAppStore((state) => state.setSelectionIndex);
@@ -31,6 +32,31 @@ function App() {
   const refreshTrending = useAppStore((state) => state.refreshTrending);
   const backToList = useAppStore((state) => state.backToList);
 
+  const matchesShortcut = (event: KeyboardEvent, shortcut: string) => {
+    const parts = shortcut.split("+").map((part) => part.trim().toLowerCase()).filter(Boolean);
+    if (!parts.length) return false;
+    const key = parts[parts.length - 1];
+    const modifiers = new Set(parts.slice(0, -1));
+
+    const wantsMod =
+      modifiers.has("commandorcontrol") ||
+      modifiers.has("cmdorctrl") ||
+      modifiers.has("mod");
+    const wantsCtrl = modifiers.has("ctrl") || modifiers.has("control");
+    const wantsCmd = modifiers.has("cmd") || modifiers.has("command");
+    const wantsAlt = modifiers.has("alt") || modifiers.has("option");
+    const wantsShift = modifiers.has("shift");
+
+    const modOk = !wantsMod || event.metaKey || event.ctrlKey;
+    const ctrlOk = !wantsCtrl || event.ctrlKey;
+    const cmdOk = !wantsCmd || event.metaKey;
+    const altOk = !wantsAlt || event.altKey;
+    const shiftOk = !wantsShift || event.shiftKey;
+    const keyOk = event.key.toLowerCase() === key.toLowerCase();
+
+    return modOk && ctrlOk && cmdOk && altOk && shiftOk && keyOk;
+  };
+
   useEffect(() => {
     init();
     const interval = window.setInterval(() => refreshTrending(), 1000 * 60 * 60 * 24);
@@ -43,11 +69,13 @@ function App() {
       await appWindow.setFocus();
       window.dispatchEvent(new Event("focus-search"));
     };
-    register("CommandOrControl+K", handler);
+    if (shortcuts.globalSearch?.trim()) {
+      register(shortcuts.globalSearch, handler);
+    }
     return () => {
       unregisterAll();
     };
-  }, []);
+  }, [shortcuts.globalSearch]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -74,15 +102,15 @@ function App() {
         }
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
+      if (matchesShortcut(event, shortcuts.togglePinned)) {
         event.preventDefault();
         togglePinned();
       }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "r") {
+      if (matchesShortcut(event, shortcuts.refreshDetails)) {
         event.preventDefault();
         refreshDetails();
       }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "o") {
+      if (matchesShortcut(event, shortcuts.openImdb)) {
         event.preventDefault();
         openImdb();
       }
@@ -111,8 +139,12 @@ function App() {
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
       <Header />
-      <SearchInput />
-      {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
+      {view !== "detail" ? (
+        <>
+          <SearchInput />
+          {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
+        </>
+      ) : null}
       <ScrollArea className="mt-3 flex-1">
         {view === "detail" ? (
           <DetailView />

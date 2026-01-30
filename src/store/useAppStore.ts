@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AppKeys, ParsedQuery, Suggestion, TitleRecord, TrendingSeed } from "../lib/types";
+import type { AppKeys, AppShortcuts, ParsedQuery, Suggestion, TitleRecord, TrendingSeed } from "../lib/types";
 import { parseQuery } from "../lib/operators";
 import {
   addRecentSearch,
@@ -48,6 +48,7 @@ interface AppState {
   keys: AppKeys;
   keysValid: boolean;
   keysError: string | null;
+  shortcuts: AppShortcuts;
   settingsOpen: boolean;
   query: string;
   parsedQuery: ParsedQuery;
@@ -75,8 +76,9 @@ interface AppState {
   refreshDetails: (id?: string | null) => Promise<void>;
   openImdb: () => Promise<void>;
   testKeys: (keys: AppKeys) => Promise<boolean>;
-  saveKeys: (keys: AppKeys) => Promise<void>;
+  saveKeys: (keys: AppKeys, options?: { close?: boolean }) => Promise<void>;
   resetKeys: () => Promise<void>;
+  setShortcuts: (shortcuts: AppShortcuts) => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
   fetchRemoteSuggestions: () => Promise<void>;
@@ -84,12 +86,19 @@ interface AppState {
 
 const CACHE_EXPIRY_SECONDS = 60 * 60 * 24 * 40;
 const TRENDING_REFRESH_SECONDS = 60 * 60 * 24;
+const DEFAULT_SHORTCUTS: AppShortcuts = {
+  globalSearch: "CommandOrControl+K",
+  togglePinned: "CommandOrControl+P",
+  refreshDetails: "CommandOrControl+R",
+  openImdb: "CommandOrControl+O"
+};
 const appWindow = getCurrentWindow();
 
 export const useAppStore = create<AppState>((set, get) => ({
   keys: {},
   keysValid: false,
   keysError: null,
+  shortcuts: DEFAULT_SHORTCUTS,
   settingsOpen: false,
   query: "",
   parsedQuery: { freeText: "", filters: {} },
@@ -107,10 +116,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   fuse: null,
   init: async () => {
     const keys = (await invoke<AppKeys>("get_keys")) ?? {};
+    const storedShortcuts = await getSetting("shortcuts");
+    let shortcuts = DEFAULT_SHORTCUTS;
+    if (storedShortcuts) {
+      try {
+        const parsed = JSON.parse(storedShortcuts) as Partial<AppShortcuts>;
+        shortcuts = { ...DEFAULT_SHORTCUTS, ...parsed };
+      } catch {
+        shortcuts = DEFAULT_SHORTCUTS;
+      }
+    }
     const pinnedIds = await listPinned();
     const localTitles = await listTitles();
     const trending = await listTrendingSeeds();
-    set({ keys, pinnedIds, localTitles, trending });
+    set({ keys, shortcuts, pinnedIds, localTitles, trending });
     get().rebuildIndex();
 
     const lastRefresh = await getSetting("last_trending_refresh");
@@ -297,16 +316,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       return false;
     }
   },
-  saveKeys: async (keys) => {
+  saveKeys: async (keys, options) => {
     const isValid = await get().testKeys(keys);
     if (!isValid) return;
     try {
       await invoke("set_keys", { omdbKey: keys.omdbKey, tmdbKey: keys.tmdbKey });
-      set({ keys, keysValid: true, settingsOpen: false, keysError: null });
+      const shouldClose = options?.close !== false;
+      set({ keys, keysValid: true, settingsOpen: shouldClose ? false : true, keysError: null });
       if (get().view === "detail") {
         await get().refreshDetails();
       }
-      window.dispatchEvent(new Event("focus-search"));
+      if (shouldClose) {
+        window.dispatchEvent(new Event("focus-search"));
+      }
     } catch (error) {
       set({ keysError: formatInvokeError(error, "Failed to save keys.") });
     }
@@ -318,6 +340,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       set({ keysError: formatInvokeError(error, "Failed to reset keys.") });
     }
+  },
+  setShortcuts: async (shortcuts) => {
+    await setSetting("shortcuts", JSON.stringify(shortcuts));
+    set({ shortcuts });
   },
   refreshTrending: async () => {
     const { keys } = get();
