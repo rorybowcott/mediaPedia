@@ -9,7 +9,7 @@ export function Header() {
 
   return (
     <div
-      className="flex items-center justify-between px-5 pt-4"
+      className="flex items-center justify-between px-5 pt-9"
       data-tauri-drag-region
       onPointerDown={handleDragStart}
     >

@@ -20,7 +20,8 @@
         "fullscreen": false,
         "alwaysOnTop": true,
         "decorations": false,
-        "transparent": true
+        "transparent": true,
+        "backgroundColor": "#00000000"
       }
     ],
     "security": {

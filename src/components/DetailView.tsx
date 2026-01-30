@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, Calendar, Clock3, Star } from "lucide-react";
+import { ExternalLink, Calendar, Clock3, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -21,7 +21,6 @@ const appWindow = getCurrentWindow();
 export function DetailView() {
   const detail = useAppStore((state) => state.detail);
   const detailLoading = useAppStore((state) => state.detailLoading);
-  const backToList = useAppStore((state) => state.backToList);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -66,27 +65,8 @@ export function DetailView() {
   };
 
   return (
-    <div className="px-5 py-4">
-      <div className="mb-4 flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={backToList}
-          className="gap-2"
-          title="Back (Esc)"
-          aria-keyshortcuts="Escape"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            className="border-transparent gap-2 p-0.5 pl-2 pr-2"
-            onClick={() => openLink(trailerUrl(detail.title, detail.year))}
-          >
-            Trailers <ExternalLink className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+    <div className="px-5">
+      <div className="mb-4" />
 
       <div className="grid gap-4 min-[650px]:grid-cols-2">
         <div className="space-y-4 min-[650px]:col-span-1">
@@ -106,6 +86,13 @@ export function DetailView() {
                     ) : null}
                   </div>
                 </div>
+                <Button
+                  variant="outline"
+                  className="border-transparent gap-2 p-0.5 pl-2 pr-2"
+                  onClick={() => openLink(trailerUrl(detail.title, detail.year))}
+                >
+                  Trailers <ExternalLink className="h-4 w-4" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">

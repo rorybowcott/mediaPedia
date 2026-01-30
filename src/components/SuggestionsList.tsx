@@ -34,7 +34,7 @@ export function SuggestionsList({
   }
 
   return (
-    <div className="space-y-2 px-3" role="listbox" aria-label={listLabel} id={listId}>
+    <div className="space-y-2 px-5" role="listbox" aria-label={listLabel} id={listId}>
       {suggestions.map((item, index) => (
         <button
           key={item.id}

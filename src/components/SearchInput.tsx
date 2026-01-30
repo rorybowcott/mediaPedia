@@ -23,7 +23,7 @@ export function SearchInput() {
 
   return (
     <div className="px-5">
-      <div className="flex items-center gap-2">
+      <div className="relative">
         <Input
           ref={inputRef}
           value={query}
@@ -33,10 +33,11 @@ export function SearchInput() {
           aria-label="Search titles"
           aria-autocomplete="list"
           data-search-input="true"
+          className="pr-12"
         />
         <Button
           variant="ghost"
-          className="h-10 w-10 shrink-0 p-0"
+          className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 p-0"
           onClick={openSettings}
           title="Settings (Cmd/Ctrl+,)"
           aria-keyshortcuts="Control+, Meta+,"

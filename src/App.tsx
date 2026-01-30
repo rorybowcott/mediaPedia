@@ -294,7 +294,7 @@ function App() {
   }, [query, fetchRemoteSuggestions]);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen flex-col overflow-hidden rounded-[20px] bg-background text-foreground">
       <Header />
       {view !== "detail" ? (
         <>
