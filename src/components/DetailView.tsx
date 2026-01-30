@@ -5,7 +5,13 @@ import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Skeleton } from "./ui/skeleton";
 import { formatRuntime, formatYear } from "../lib/utils";
-import { imdbUrl, metacriticUrl, rottenTomatoesUrl, trailerUrl, wikipediaUrl } from "../lib/links";
+import {
+  imdbUrl,
+  metacriticUrl,
+  rottenTomatoesUrl,
+  trailerUrl,
+  wikipediaUrl,
+} from "../lib/links";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore } from "../store/useAppStore";
@@ -19,7 +25,8 @@ export function DetailView() {
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
-    detail?.omdbRatings?.find((rating) => rating.source === source)?.value ?? null;
+    detail?.omdbRatings?.find((rating) => rating.source === source)?.value ??
+    null;
 
   if (detailLoading && !detail) {
     return (
@@ -47,7 +54,9 @@ export function DetailView() {
 
   if (!detail) {
     return (
-      <div className="px-5 py-6 text-sm text-muted-foreground">Select a title to view details.</div>
+      <div className="px-5 py-6 text-sm text-muted-foreground">
+        Select a title to view details.
+      </div>
     );
   }
 
@@ -63,22 +72,12 @@ export function DetailView() {
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         <div className="flex flex-wrap items-center gap-2">
-          {detail.imdbId ? (
-            <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(imdbUrl(detail.imdbId!))}>
-              IMDb
-            </Button>
-          ) : null}
-          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(rottenTomatoesUrl(detail.title))}>
-            Rotten Tomatoes
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(metacriticUrl(detail.title))}>
-            Metacritic
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(wikipediaUrl(detail.title, detail.year))}>
-            Wikipedia
-          </Button>
-          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(trailerUrl(detail.title, detail.year))}>
-            Trailer
+          <Button
+            variant="outline"
+            className="border-transparent gap-2 p-0.5 pl-2 pr-2"
+            onClick={() => openLink(trailerUrl(detail.title, detail.year))}
+          >
+            Trailers <ExternalLink className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -106,7 +105,11 @@ export function DetailView() {
             <CardContent className="space-y-4 pt-4">
               <div className="mx-auto h-[320px] w-[220px] overflow-hidden rounded-2xl bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
                 {detail.posterUrl ? (
-                  <img src={detail.posterUrl} alt={detail.title} className="h-full w-full object-cover" />
+                  <img
+                    src={detail.posterUrl}
+                    alt={detail.title}
+                    className="h-full w-full object-cover"
+                  />
                 ) : null}
               </div>
               <Separator />
@@ -115,7 +118,11 @@ export function DetailView() {
                 <div className="flex flex-wrap gap-2">
                   {(detail.genres ?? []).length
                     ? detail.genres?.map((genre) => (
-                        <Badge key={genre} variant="secondary" className="rounded-full px-3 py-1">
+                        <Badge
+                          key={genre}
+                          variant="secondary"
+                          className="rounded-full px-3 py-1"
+                        >
                           {genre}
                         </Badge>
                       ))
@@ -131,7 +138,6 @@ export function DetailView() {
               </div>
             </CardContent>
           </Card>
-
         </div>
 
         <div className="space-y-4 min-[650px]:col-span-1">
@@ -144,23 +150,33 @@ export function DetailView() {
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Clock3 className="h-4 w-4" /> Runtime
                 </div>
-                <div className="mt-2 text-lg font-semibold">{formatRuntime(detail.runtime)}</div>
+                <div className="mt-2 text-lg font-semibold">
+                  {formatRuntime(detail.runtime)}
+                </div>
               </div>
               <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Calendar className="h-4 w-4" /> Released
                 </div>
-                <div className="mt-2 text-lg font-semibold">{formatYear(detail.year)}</div>
+                <div className="mt-2 text-lg font-semibold">
+                  {formatYear(detail.year)}
+                </div>
               </div>
               <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Star className="h-4 w-4" /> IMDb Rating
                 </div>
-                <div className="mt-2 text-lg font-semibold">{detail.rating ?? "—"}</div>
+                <div className="mt-2 text-lg font-semibold">
+                  {detail.rating ?? "—"}
+                </div>
               </div>
               <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
-                <div className="text-xs uppercase text-muted-foreground">IMDb Votes</div>
-                <div className="mt-2 text-lg font-semibold">{formatVotes(detail.votes)}</div>
+                <div className="text-xs uppercase text-muted-foreground">
+                  IMDb Votes
+                </div>
+                <div className="mt-2 text-lg font-semibold">
+                  {formatVotes(detail.votes)}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -171,27 +187,48 @@ export function DetailView() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                <p className="text-muted-foreground">Internet Movie Database</p>
                 <div className="mt-1 flex items-center justify-between">
-                  <span>IMDb</span>
-                  <span className="font-semibold">{detail.rating ? `${detail.rating}/10` : "—"}</span>
-                </div>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                <p className="text-muted-foreground">Rotten Tomatoes</p>
-                <div className="mt-1 flex items-center justify-between">
-                  <span>Critic Score</span>
+                  <Button
+                    variant="outline"
+                    className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
+                    onClick={() => openLink(imdbUrl(detail.imdbId!))}
+                  >
+                    IMDb
+                  </Button>{" "}
                   <span className="font-semibold">
-                    {detail.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes") ?? "—"}
+                    {detail.rating ? `${detail.rating}/10` : "—"}
                   </span>
                 </div>
               </div>
               <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                <p className="text-muted-foreground">Metacritic</p>
                 <div className="mt-1 flex items-center justify-between">
-                  <span>Metascore</span>
+                  <Button
+                    variant="outline"
+                    className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
+                    onClick={() => openLink(rottenTomatoesUrl(detail.title))}
+                  >
+                    Rotten Tomatoes
+                  </Button>{" "}
                   <span className="font-semibold">
-                    {detail.metacriticScore ?? getOmdbRating("Metacritic") ?? "—"}
+                    {detail.rottenTomatoesScore ??
+                      getOmdbRating("Rotten Tomatoes") ??
+                      "—"}
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/70 bg-background/40 p-3">
+                <div className="mt-1 flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
+                    onClick={() => openLink(metacriticUrl(detail.title))}
+                  >
+                    Metacritic
+                  </Button>{" "}
+                  <span className="font-semibold">
+                    {detail.metacriticScore ??
+                      getOmdbRating("Metacritic") ??
+                      "—"}
                   </span>
                 </div>
               </div>
@@ -207,7 +244,10 @@ export function DetailView() {
                 <p className="text-muted-foreground">Director</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {detail.director ? (
-                    <Badge variant="secondary" className="rounded-full px-3 py-1">
+                    <Badge
+                      variant="secondary"
+                      className="rounded-full px-3 py-1"
+                    >
                       {detail.director}
                     </Badge>
                   ) : (
@@ -219,11 +259,18 @@ export function DetailView() {
                 <p className="text-muted-foreground">Cast</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {detail.cast
-                    ? detail.cast.split(",").slice(0, 6).map((name) => (
-                        <Badge key={name.trim()} variant="secondary" className="rounded-full px-3 py-1">
-                          {name.trim()}
-                        </Badge>
-                      ))
+                    ? detail.cast
+                        .split(",")
+                        .slice(0, 6)
+                        .map((name) => (
+                          <Badge
+                            key={name.trim()}
+                            variant="secondary"
+                            className="rounded-full px-3 py-1"
+                          >
+                            {name.trim()}
+                          </Badge>
+                        ))
                     : "—"}
                 </div>
               </div>
@@ -247,7 +294,9 @@ export function DetailView() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">IMDb ID</span>
-                <span className="font-mono text-xs">{detail.imdbId ?? "—"}</span>
+                <span className="font-mono text-xs">
+                  {detail.imdbId ?? "—"}
+                </span>
               </div>
             </CardContent>
           </Card>
