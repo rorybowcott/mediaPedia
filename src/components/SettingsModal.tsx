@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useAppStore } from "../store/useAppStore";
 import type { AppShortcuts } from "../lib/types";
-import { CornerDownLeft } from "lucide-react";
+import { CornerDownLeft, Ban } from "lucide-react";
 
 const DEFAULT_SHORTCUTS: AppShortcuts = {
   globalSearch: "CommandOrControl+K",
@@ -204,11 +204,13 @@ export function SettingsModal() {
             ))}
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="mt-6">
+          <Button variant="ghost" onClick={closeSettings} className="h-8 gap-1 px-5 text-sm">
+            Cancel
+          </Button>
           <Button
-            variant="secondary"
             onClick={closeSettings}
-            className="h-11 gap-3 rounded-full border border-border/70 bg-card/70 px-5 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+            className="h-8 gap-1 px-5 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
           >
             Accept
             <span className="flex h-7 w-7 items-center justify-center rounded-md bg-background/40 text-foreground/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">

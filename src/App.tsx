@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useEffect, useRef } from "react";
+import { getCurrentWindow, LogicalPosition } from "@tauri-apps/api/window";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useAppStore } from "./store/useAppStore";
 import { SearchInput } from "./components/SearchInput";
@@ -14,6 +14,7 @@ import { debounce } from "./lib/utils";
 
 const REMOTE_SEARCH_DEBOUNCE = 250;
 const appWindow = getCurrentWindow();
+const SNAP_THRESHOLD = 20;
 
 function App() {
   const init = useAppStore((state) => state.init);
@@ -31,6 +32,8 @@ function App() {
   const fetchRemoteSuggestions = useAppStore((state) => state.fetchRemoteSuggestions);
   const refreshTrending = useAppStore((state) => state.refreshTrending);
   const backToList = useAppStore((state) => state.backToList);
+  const isAdjustingResize = useRef(false);
+  const lastBounds = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const matchesShortcut = (event: KeyboardEvent, shortcut: string) => {
     const parts = shortcut.split("+").map((part) => part.trim().toLowerCase()).filter(Boolean);
@@ -128,6 +131,95 @@ function App() {
     view,
     backToList
   ]);
+
+  useEffect(() => {
+    const onPointerRelease = async () => {
+      try {
+        const monitor = await appWindow.currentMonitor();
+        const position = await appWindow.outerPosition();
+        const size = await appWindow.outerSize();
+
+        if (!monitor || !position || !size) return;
+
+        const centerX = Math.round((monitor.position.x + monitor.size.width / 2) - size.width / 2);
+        const centerY = Math.round((monitor.position.y + monitor.size.height / 2) - size.height / 2);
+
+        const snapX = Math.abs(position.x - centerX) <= SNAP_THRESHOLD;
+        const snapY = Math.abs(position.y - centerY) <= SNAP_THRESHOLD;
+
+        if (snapX || snapY) {
+          await appWindow.setPosition(
+            new LogicalPosition(snapX ? centerX : position.x, snapY ? centerY : position.y)
+          );
+        }
+      } catch {
+        // best-effort snapping only
+      }
+    };
+
+    window.addEventListener("mouseup", onPointerRelease);
+    window.addEventListener("touchend", onPointerRelease);
+    return () => {
+      window.removeEventListener("mouseup", onPointerRelease);
+      window.removeEventListener("touchend", onPointerRelease);
+    };
+  }, []);
+
+  useEffect(() => {
+    const setup = async () => {
+      try {
+        const position = await appWindow.outerPosition();
+        const size = await appWindow.outerSize();
+        lastBounds.current = { x: position.x, y: position.y, w: size.width, h: size.height };
+      } catch {
+        lastBounds.current = null;
+      }
+    };
+
+    setup();
+
+    const unlistenPromise = appWindow.onResized(async () => {
+      if (isAdjustingResize.current) return;
+      try {
+        const position = await appWindow.outerPosition();
+        const size = await appWindow.outerSize();
+        const prev = lastBounds.current;
+        if (!prev) {
+          lastBounds.current = { x: position.x, y: position.y, w: size.width, h: size.height };
+          return;
+        }
+
+        const deltaW = size.width - prev.w;
+        const deltaH = size.height - prev.h;
+        let nextX = Math.round(prev.x - deltaW / 2);
+        let nextY = Math.round(prev.y - deltaH / 2);
+
+        const monitor = await appWindow.currentMonitor();
+        if (monitor) {
+          const minX = monitor.position.x;
+          const minY = monitor.position.y;
+          const maxX = monitor.position.x + monitor.size.width - size.width;
+          const maxY = monitor.position.y + monitor.size.height - size.height;
+          nextX = Math.min(Math.max(nextX, minX), maxX);
+          nextY = Math.min(Math.max(nextY, minY), maxY);
+        }
+
+        if (nextX !== position.x || nextY !== position.y) {
+          isAdjustingResize.current = true;
+          await appWindow.setPosition(new LogicalPosition(nextX, nextY));
+          isAdjustingResize.current = false;
+        }
+
+        lastBounds.current = { x: nextX, y: nextY, w: size.width, h: size.height };
+      } catch {
+        isAdjustingResize.current = false;
+      }
+    });
+
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   useEffect(() => {
     const debounced = debounce(() => {
