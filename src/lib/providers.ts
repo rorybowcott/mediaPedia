@@ -30,6 +30,14 @@ const omdbDetailSchema = z.object({
   Country: z.string().optional(),
   Language: z.string().optional(),
   Poster: z.string().optional(),
+  Ratings: z
+    .array(
+      z.object({
+        Source: z.string(),
+        Value: z.string()
+      })
+    )
+    .optional(),
   Response: z.string().optional(),
   Error: z.string().optional()
 });
@@ -77,6 +85,56 @@ function mapType(value?: string | null): TitleType {
   if (lowered.includes("movie")) return "movie";
   if (lowered.includes("tv") || lowered.includes("series")) return "series";
   return "other";
+}
+
+function normalizeOmdbValue(value?: string | null) {
+  if (!value) return null;
+  if (value.trim().toLowerCase() === "n/a") return null;
+  return value;
+}
+
+function parseOmdbVotes(value?: string | null) {
+  const cleaned = normalizeOmdbValue(value);
+  if (!cleaned) return null;
+  const parsed = Number(cleaned.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function mapOmdbDetail(data: z.infer<typeof omdbDetailSchema>, fallbackImdbId?: string | null) {
+  const genres = normalizeOmdbValue(data.Genre)
+    ?.split(",")
+    .map((genre) => genre.trim())
+    .filter(Boolean);
+  const ratings = data.Ratings ?? [];
+  const rottenTomatoesScore = normalizeOmdbValue(
+    ratings.find((rating) => rating.Source === "Rotten Tomatoes")?.Value
+  );
+  const metacriticScore = normalizeOmdbValue(
+    ratings.find((rating) => rating.Source === "Metacritic")?.Value
+  );
+  const omdbRatings = ratings.length
+    ? ratings.map((rating) => ({ source: rating.Source, value: rating.Value }))
+    : null;
+  return {
+    imdbId: normalizeOmdbValue(data.imdbID) ?? fallbackImdbId ?? null,
+    title: data.Title,
+    year: normalizeOmdbValue(data.Year),
+    type: mapType(data.Type),
+    runtime: normalizeOmdbValue(data.Runtime),
+    rating: normalizeOmdbValue(data.imdbRating),
+    votes: parseOmdbVotes(data.imdbVotes),
+    genres,
+    plot: normalizeOmdbValue(data.Plot),
+    cast: normalizeOmdbValue(data.Actors),
+    director: normalizeOmdbValue(data.Director),
+    country: normalizeOmdbValue(data.Country),
+    language: normalizeOmdbValue(data.Language),
+    rottenTomatoesScore,
+    metacriticScore,
+    omdbRatings,
+    posterUrl: normalizeOmdbValue(data.Poster),
+    source: "omdb"
+  } satisfies Partial<TitleRecord>;
 }
 
 export async function validateOmdbKey(key: string) {
@@ -147,24 +205,16 @@ export async function fetchOmdbDetails(imdbId: string, key: string) {
   const res = await fetch(url);
   const data = omdbDetailSchema.safeParse(await res.json());
   if (!data.success || data.data.Error) return null;
-  const genres = data.data.Genre?.split(",").map((genre) => genre.trim());
-  return {
-    imdbId: data.data.imdbID ?? imdbId,
-    title: data.data.Title,
-    year: data.data.Year ?? null,
-    type: mapType(data.data.Type),
-    runtime: data.data.Runtime ?? null,
-    rating: data.data.imdbRating ?? null,
-    votes: data.data.imdbVotes ? Number(data.data.imdbVotes.replace(/,/g, "")) : null,
-    genres,
-    plot: data.data.Plot ?? null,
-    cast: data.data.Actors ?? null,
-    director: data.data.Director ?? null,
-    country: data.data.Country ?? null,
-    language: data.data.Language ?? null,
-    posterUrl: data.data.Poster && data.data.Poster !== "N/A" ? data.data.Poster : null,
-    source: "omdb"
-  } satisfies Partial<TitleRecord>;
+  return mapOmdbDetail(data.data, imdbId);
+}
+
+export async function fetchOmdbDetailsByTitle(title: string, key: string, year?: string | number | null) {
+  const base = `https://www.omdbapi.com/?apikey=${encodeURIComponent(key)}&t=${encodeURIComponent(title)}&plot=full`;
+  const url = year ? `${base}&y=${encodeURIComponent(String(year))}` : base;
+  const res = await fetch(url);
+  const data = omdbDetailSchema.safeParse(await res.json());
+  if (!data.success || data.data.Error) return null;
+  return mapOmdbDetail(data.data);
 }
 
 export async function fetchTmdbDetails(tmdbId: number, key: string, type: "movie" | "tv") {

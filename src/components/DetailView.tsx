@@ -19,6 +19,8 @@ export function DetailView() {
   const refreshDetails = useAppStore((state) => state.refreshDetails);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
+  const getOmdbRating = (source: string) =>
+    detail?.omdbRatings?.find((rating) => rating.source === source)?.value ?? null;
 
   if (detailLoading && !detail) {
     return (
@@ -176,14 +178,18 @@ export function DetailView() {
                 <p className="text-muted-foreground">Rotten Tomatoes</p>
                 <div className="mt-1 flex items-center justify-between">
                   <span>Critic Score</span>
-                  <span className="font-semibold">—</span>
+                  <span className="font-semibold">
+                    {detail.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes") ?? "—"}
+                  </span>
                 </div>
               </div>
               <div className="rounded-xl border border-border/70 bg-background/40 p-3">
                 <p className="text-muted-foreground">Metacritic</p>
                 <div className="mt-1 flex items-center justify-between">
                   <span>Metascore</span>
-                  <span className="font-semibold">—</span>
+                  <span className="font-semibold">
+                    {detail.metacriticScore ?? getOmdbRating("Metacritic") ?? "—"}
+                  </span>
                 </div>
               </div>
             </CardContent>

@@ -14,8 +14,8 @@ export async function upsertTitle(title: TitleRecord) {
   const db = await getDb();
   const now = Math.floor(Date.now() / 1000);
   await db.execute(
-    `INSERT INTO titles (id, imdb_id, tmdb_id, title, year, type, runtime, rating, votes, poster_url, backdrop_url, genres, plot, cast, director, country, language, popularity, source, tmdb_rank, tmdb_trending_at, created_at, updated_at, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO titles (id, imdb_id, tmdb_id, title, year, type, runtime, rating, votes, poster_url, backdrop_url, genres, plot, cast, director, country, language, rotten_tomatoes_score, metacritic_score, popularity, source, tmdb_rank, tmdb_trending_at, created_at, updated_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        imdb_id=excluded.imdb_id,
        tmdb_id=excluded.tmdb_id,
@@ -33,6 +33,8 @@ export async function upsertTitle(title: TitleRecord) {
        director=excluded.director,
        country=excluded.country,
        language=excluded.language,
+       rotten_tomatoes_score=excluded.rotten_tomatoes_score,
+       metacritic_score=excluded.metacritic_score,
        popularity=excluded.popularity,
        source=excluded.source,
        tmdb_rank=excluded.tmdb_rank,
@@ -57,6 +59,8 @@ export async function upsertTitle(title: TitleRecord) {
       title.director ?? null,
       title.country ?? null,
       title.language ?? null,
+      title.rottenTomatoesScore ?? null,
+      title.metacriticScore ?? null,
       title.popularity ?? null,
       title.source ?? null,
       title.tmdbRank ?? null,
@@ -197,6 +201,8 @@ function mapTitleRow(row: Record<string, unknown>): TitleRecord {
     director: row.director ? String(row.director) : null,
     country: row.country ? String(row.country) : null,
     language: row.language ? String(row.language) : null,
+    rottenTomatoesScore: row.rotten_tomatoes_score ? String(row.rotten_tomatoes_score) : null,
+    metacriticScore: row.metacritic_score ? String(row.metacritic_score) : null,
     popularity: row.popularity ? Number(row.popularity) : null,
     source: (row.source as TitleRecord["source"]) ?? null,
     tmdbRank: row.tmdb_rank ? Number(row.tmdb_rank) : null,

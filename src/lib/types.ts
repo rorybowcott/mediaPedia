@@ -18,6 +18,9 @@ export interface TitleRecord {
   director?: string | null;
   country?: string | null;
   language?: string | null;
+  rottenTomatoesScore?: string | null;
+  metacriticScore?: string | null;
+  omdbRatings?: { source: string; value: string }[] | null;
   popularity?: number | null;
   source?: "omdb" | "tmdb" | "cache" | "mixed";
   lastUpdatedAt?: number | null;
