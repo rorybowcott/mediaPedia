@@ -25,10 +25,24 @@ import {
   validateTmdbKey
 } from "../lib/providers";
 import { nowUnix } from "../lib/utils";
-import { invoke } from "@tauri-apps/api/tauri";
-import { open } from "@tauri-apps/api/shell";
-import { appWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-shell";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { imdbUrl } from "../lib/links";
+
+function formatInvokeError(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  if (typeof error === "string") return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return fallback;
+  }
+}
 
 interface AppState {
   keys: AppKeys;
@@ -70,6 +84,7 @@ interface AppState {
 
 const CACHE_EXPIRY_SECONDS = 60 * 60 * 24 * 40;
 const TRENDING_REFRESH_SECONDS = 60 * 60 * 24;
+const appWindow = getCurrentWindow();
 
 export const useAppStore = create<AppState>((set, get) => ({
   keys: {},
@@ -106,6 +121,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (keys.omdbKey && keys.tmdbKey) {
       const isValid = await get().testKeys(keys);
       set({ keysValid: isValid, settingsOpen: !isValid });
+      if (isValid && get().view === "detail") {
+        await get().refreshDetails();
+      }
     } else {
       set({ keysValid: false, settingsOpen: true });
     }
@@ -153,37 +171,41 @@ export const useAppStore = create<AppState>((set, get) => ({
     const isTmdb = targetId.startsWith("tmdb:");
     const tmdbId = cached?.tmdbId ?? (isTmdb ? Number(targetId.split(":")[1]) : null);
     const imdbId = cached?.imdbId ?? (isTmdb ? null : targetId);
+    let resolvedImdb: string | null = imdbId;
 
     let merged: TitleRecord | null = cached ?? null;
     let fallbackLabel: string | null = null;
     let omdbSuccess = false;
     let tmdbSuccess = false;
 
+    const applyOmdb = (omdbData: Partial<TitleRecord>, base: TitleRecord | null) => ({
+      id: omdbData.imdbId ?? resolvedImdb ?? imdbId ?? base?.id ?? targetId,
+      imdbId: omdbData.imdbId ?? resolvedImdb ?? imdbId ?? base?.imdbId ?? null,
+      tmdbId: base?.tmdbId ?? tmdbId ?? null,
+      title: omdbData.title ?? base?.title ?? "",
+      year: omdbData.year ?? base?.year ?? null,
+      type: omdbData.type ?? base?.type ?? "movie",
+      runtime: omdbData.runtime ?? base?.runtime ?? null,
+      rating: omdbData.rating ?? base?.rating ?? null,
+      votes: omdbData.votes ?? base?.votes ?? null,
+      posterUrl: omdbData.posterUrl ?? base?.posterUrl ?? null,
+      backdropUrl: base?.backdropUrl ?? null,
+      genres: omdbData.genres ?? base?.genres ?? null,
+      plot: omdbData.plot ?? base?.plot ?? null,
+      cast: omdbData.cast ?? base?.cast ?? null,
+      director: omdbData.director ?? base?.director ?? null,
+      country: omdbData.country ?? base?.country ?? null,
+      language: omdbData.language ?? base?.language ?? null,
+      popularity: base?.popularity ?? null,
+      source: "omdb",
+      expiresAt: nowUnix() + CACHE_EXPIRY_SECONDS
+    });
+
     if (imdbId) {
       const omdbData = await fetchOmdbDetails(imdbId, keys.omdbKey);
       if (omdbData) {
         omdbSuccess = true;
-        merged = {
-          id: imdbId,
-          imdbId,
-          tmdbId: tmdbId ?? null,
-          title: omdbData.title ?? cached?.title ?? "",
-          year: omdbData.year ?? cached?.year ?? null,
-          type: omdbData.type ?? cached?.type ?? "movie",
-          runtime: omdbData.runtime ?? cached?.runtime ?? null,
-          rating: omdbData.rating ?? cached?.rating ?? null,
-          votes: omdbData.votes ?? cached?.votes ?? null,
-          posterUrl: omdbData.posterUrl ?? cached?.posterUrl ?? null,
-          genres: omdbData.genres ?? cached?.genres ?? null,
-          plot: omdbData.plot ?? cached?.plot ?? null,
-          cast: omdbData.cast ?? cached?.cast ?? null,
-          director: omdbData.director ?? cached?.director ?? null,
-          country: omdbData.country ?? cached?.country ?? null,
-          language: omdbData.language ?? cached?.language ?? null,
-          popularity: cached?.popularity ?? null,
-          source: "omdb",
-          expiresAt: nowUnix() + CACHE_EXPIRY_SECONDS
-        };
+        merged = applyOmdb(omdbData, cached ?? merged);
       }
     }
 
@@ -192,7 +214,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const tmdbData = await fetchTmdbDetails(tmdbId, keys.tmdbKey, tmdbType);
       if (tmdbData) {
         tmdbSuccess = true;
-        const resolvedImdb = imdbId ?? (await resolveImdbId(tmdbId, keys.tmdbKey, tmdbType));
+        resolvedImdb = resolvedImdb ?? (await resolveImdbId(tmdbId, keys.tmdbKey, tmdbType));
         merged = {
           id: resolvedImdb ?? targetId,
           imdbId: resolvedImdb ?? imdbId ?? null,
@@ -215,6 +237,14 @@ export const useAppStore = create<AppState>((set, get) => ({
           source: merged?.source ?? "tmdb",
           expiresAt: nowUnix() + CACHE_EXPIRY_SECONDS
         };
+      }
+    }
+
+    if (!omdbSuccess && resolvedImdb) {
+      const omdbData = await fetchOmdbDetails(resolvedImdb, keys.omdbKey);
+      if (omdbData) {
+        omdbSuccess = true;
+        merged = applyOmdb(omdbData, merged ?? cached);
       }
     }
 
@@ -251,26 +281,43 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ keysError: "Both keys are required." });
       return false;
     }
-    const [omdbStatus, tmdbStatus] = await Promise.all([
-      validateOmdbKey(keys.omdbKey),
-      validateTmdbKey(keys.tmdbKey)
-    ]);
-    if (!omdbStatus.ok || !tmdbStatus.ok) {
-      set({ keysError: omdbStatus.message ?? tmdbStatus.message ?? "Key validation failed." });
+    try {
+      const [omdbStatus, tmdbStatus] = await Promise.all([
+        validateOmdbKey(keys.omdbKey),
+        validateTmdbKey(keys.tmdbKey)
+      ]);
+      if (!omdbStatus.ok || !tmdbStatus.ok) {
+        set({ keysError: omdbStatus.message ?? tmdbStatus.message ?? "Key validation failed." });
+        return false;
+      }
+      set({ keysError: null });
+      return true;
+    } catch (error) {
+      set({ keysError: formatInvokeError(error, "Key validation failed.") });
       return false;
     }
-    set({ keysError: null });
-    return true;
   },
   saveKeys: async (keys) => {
     const isValid = await get().testKeys(keys);
     if (!isValid) return;
-    await invoke("set_keys", { omdb_key: keys.omdbKey, tmdb_key: keys.tmdbKey });
-    set({ keys, keysValid: true, settingsOpen: false });
+    try {
+      await invoke("set_keys", { omdbKey: keys.omdbKey, tmdbKey: keys.tmdbKey });
+      set({ keys, keysValid: true, settingsOpen: false, keysError: null });
+      if (get().view === "detail") {
+        await get().refreshDetails();
+      }
+      window.dispatchEvent(new Event("focus-search"));
+    } catch (error) {
+      set({ keysError: formatInvokeError(error, "Failed to save keys.") });
+    }
   },
   resetKeys: async () => {
-    await invoke("reset_keys");
-    set({ keys: {}, keysValid: false, settingsOpen: true });
+    try {
+      await invoke("reset_keys");
+      set({ keys: {}, keysValid: false, settingsOpen: true, keysError: null });
+    } catch (error) {
+      set({ keysError: formatInvokeError(error, "Failed to reset keys.") });
+    }
   },
   refreshTrending: async () => {
     const { keys } = get();

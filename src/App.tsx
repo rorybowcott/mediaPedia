@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { appWindow } from "@tauri-apps/api/window";
-import { register, unregisterAll } from "@tauri-apps/api/globalShortcut";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useAppStore } from "./store/useAppStore";
 import { SearchInput } from "./components/SearchInput";
 import { SuggestionsList } from "./components/SuggestionsList";
@@ -13,6 +13,7 @@ import { Header } from "./components/Header";
 import { debounce } from "./lib/utils";
 
 const REMOTE_SEARCH_DEBOUNCE = 250;
+const appWindow = getCurrentWindow();
 
 function App() {
   const init = useAppStore((state) => state.init);

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-toggle-tray"
+description = "Enables the toggle_tray command without any pre-configured scope."
+commands.allow = ["toggle_tray"]
+
+[[permission]]
+identifier = "deny-toggle-tray"
+description = "Denies the toggle_tray command without any pre-configured scope."
+commands.deny = ["toggle_tray"]

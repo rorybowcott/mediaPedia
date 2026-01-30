@@ -6,9 +6,11 @@ import { Separator } from "./ui/separator";
 import { Skeleton } from "./ui/skeleton";
 import { formatRuntime, formatYear } from "../lib/utils";
 import { imdbUrl, metacriticUrl, rottenTomatoesUrl, trailerUrl, wikipediaUrl } from "../lib/links";
-import { open } from "@tauri-apps/api/shell";
-import { appWindow } from "@tauri-apps/api/window";
+import { open } from "@tauri-apps/plugin-shell";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore } from "../store/useAppStore";
+
+const appWindow = getCurrentWindow();
 
 export function DetailView() {
   const detail = useAppStore((state) => state.detail);

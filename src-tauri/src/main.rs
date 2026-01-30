@@ -2,11 +2,15 @@
 
 use keyring::Entry;
 use std::sync::Mutex;
-use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu};
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::Manager;
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 const SERVICE_NAME: &str = "MediaPedia";
 const OMDB_ACCOUNT: &str = "omdb";
 const TMDB_ACCOUNT: &str = "tmdb";
+const TRAY_ID: &str = "main";
 
 #[derive(Default)]
 struct TrayState {
@@ -25,15 +29,15 @@ fn get_keys() -> Option<serde_json::Value> {
 }
 
 #[tauri::command]
-fn set_keys(omdb_key: String, tmdb_key: String) -> Result<(), String> {
+fn set_keys(omdbKey: String, tmdbKey: String) -> Result<(), String> {
     Entry::new(SERVICE_NAME, OMDB_ACCOUNT)
         .map_err(|err| err.to_string())?
-        .set_password(&omdb_key)
+        .set_password(&omdbKey)
         .map_err(|err| err.to_string())?;
 
     Entry::new(SERVICE_NAME, TMDB_ACCOUNT)
         .map_err(|err| err.to_string())?
-        .set_password(&tmdb_key)
+        .set_password(&tmdbKey)
         .map_err(|err| err.to_string())?;
 
     Ok(())
@@ -54,54 +58,72 @@ fn reset_keys() -> Result<(), String> {
 fn toggle_tray(app: tauri::AppHandle) -> Result<bool, String> {
     let state = app.state::<TrayState>();
     let mut visible = state.visible.lock().map_err(|err| err.to_string())?;
-    let tray_handle = app.tray_handle();
+    let tray = app.tray_by_id(TRAY_ID).ok_or("Tray icon not available")?;
     let next = !*visible;
-    tray_handle.set_visible(next).map_err(|err| err.to_string())?;
+    tray.set_visible(next).map_err(|err| err.to_string())?;
     *visible = next;
     Ok(next)
 }
 
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 fn main() {
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(CustomMenuItem::new("show".to_string(), "Show MediaPedia"))
-        .add_item(CustomMenuItem::new("quit".to_string(), "Quit"));
-    let system_tray = SystemTray::new().with_menu(tray_menu);
+    let migrations = vec![Migration {
+        version: 1,
+        description: "init",
+        sql: include_str!("../migrations/001_init.sql"),
+        kind: MigrationKind::Up,
+    }];
 
     tauri::Builder::default()
         .manage(TrayState::default())
         .invoke_handler(tauri::generate_handler![get_keys, set_keys, reset_keys, toggle_tray])
-        .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "show" => {
-                    if let Some(window) = app.get_window("main") {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
-                }
-                "quit" => {
-                    std::process::exit(0);
-                }
-                _ => {}
-            },
-            SystemTrayEvent::LeftClick { .. } => {
-                if let Some(window) = app.get_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
-            }
-            _ => {}
-        })
         .setup(|app| {
             let tray_state = app.state::<TrayState>();
             if let Ok(mut visible) = tray_state.visible.lock() {
                 *visible = false;
             }
-            let tray_handle = app.tray_handle();
-            let _ = tray_handle.set_visible(false);
+
+            let show = MenuItem::with_id(app, "show", "Show MediaPedia", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show, &quit])?;
+
+            let tray = TrayIconBuilder::with_id(TRAY_ID)
+                .menu(&menu)
+                .build(app)?;
+
+            tray.on_menu_event(|app, event| match event.id().0.as_str() {
+                "show" => show_main_window(app),
+                "quit" => app.exit(0),
+                _ => {}
+            });
+
+            tray.on_tray_icon_event(|tray, event| {
+                if let TrayIconEvent::Click {
+                    button: MouseButton::Left,
+                    button_state: MouseButtonState::Up,
+                    ..
+                } = event
+                {
+                    let app = tray.app_handle();
+                    show_main_window(&app);
+                }
+            });
+
+            tray.set_visible(false)?;
+
             Ok(())
         })
-        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_sql::Builder::default()
+            .add_migrations("sqlite:mediapedia.db", migrations)
+            .build())
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -16,22 +16,28 @@ export function SettingsModal() {
   const [omdbKey, setOmdbKey] = useState(keys.omdbKey ?? "");
   const [tmdbKey, setTmdbKey] = useState(keys.tmdbKey ?? "");
   const [testing, setTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (settingsOpen) {
       setOmdbKey(keys.omdbKey ?? "");
       setTmdbKey(keys.tmdbKey ?? "");
+      setTestMessage(null);
     }
   }, [keys, settingsOpen]);
 
   const handleTest = async () => {
     setTesting(true);
-    await testKeys({ omdbKey, tmdbKey });
+    const ok = await testKeys({ omdbKey, tmdbKey });
+    setTestMessage(ok ? "Keys look valid. Click Save to enable search." : null);
     setTesting(false);
   };
 
   const handleSave = async () => {
+    setSaving(true);
     await saveKeys({ omdbKey, tmdbKey });
+    setSaving(false);
   };
 
   const handleReset = async () => {
@@ -53,13 +59,26 @@ export function SettingsModal() {
         <div className="space-y-3">
           <div>
             <label className="text-xs uppercase text-muted-foreground">OMDb API Key</label>
-            <Input value={omdbKey} onChange={(event) => setOmdbKey(event.target.value)} />
+            <Input
+              value={omdbKey}
+              onChange={(event) => {
+                setOmdbKey(event.target.value);
+                setTestMessage(null);
+              }}
+            />
           </div>
           <div>
             <label className="text-xs uppercase text-muted-foreground">TMDB API Key</label>
-            <Input value={tmdbKey} onChange={(event) => setTmdbKey(event.target.value)} />
+            <Input
+              value={tmdbKey}
+              onChange={(event) => {
+                setTmdbKey(event.target.value);
+                setTestMessage(null);
+              }}
+            />
           </div>
           {keysError ? <p className="text-sm text-red-400">{keysError}</p> : null}
+          {testMessage ? <p className="text-sm text-emerald-400">{testMessage}</p> : null}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={handleReset}>
@@ -68,7 +87,9 @@ export function SettingsModal() {
           <Button variant="outline" onClick={handleTest} disabled={testing}>
             {testing ? "Testing..." : "Test keys"}
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

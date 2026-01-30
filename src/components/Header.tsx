@@ -1,7 +1,7 @@
 import { Settings, Pin } from "lucide-react";
 import { Button } from "./ui/button";
 import { useAppStore } from "../store/useAppStore";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 
 export function Header() {
   const openSettings = useAppStore((state) => state.openSettings);
