@@ -1,0 +1,54 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:5173",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "MediaPedia",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "bundle": {
+      "identifier": "com.bowcott.mediapedia"
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "MediaPedia",
+        "width": 750,
+        "height": 470,
+        "center": true,
+        "resizable": false,
+        "fullscreen": false,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "transparent": false
+      }
+    ],
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "open": true
+      },
+      "window": {
+        "hide": true,
+        "show": true,
+        "setFocus": true
+      },
+      "globalShortcut": {
+        "all": true
+      }
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:mediapedia.db"],
+      "migrations": ["migrations/001_init.sql"]
+    }
+  }
+}
