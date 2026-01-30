@@ -1,5 +1,5 @@
 import Fuse from "fuse.js";
-import type { ParsedQuery, Suggestion, TitleRecord } from "./types";
+import type { Suggestion, TitleRecord } from "./types";
 
 export function buildFuseIndex(items: TitleRecord[]) {
   return new Fuse(items, {
@@ -7,35 +7,6 @@ export function buildFuseIndex(items: TitleRecord[]) {
     threshold: 0.35,
     includeScore: true
   });
-}
-
-function matchesFilters(item: TitleRecord, filters: ParsedQuery["filters"]) {
-  if (filters.type) {
-    if (filters.type === "documentary") {
-      const genres = item.genres?.join(" ").toLowerCase() ?? "";
-      if (item.type === "documentary") return true;
-      if (!genres) return true;
-      if (!genres.includes("documentary")) return false;
-    } else if (item.type !== filters.type) {
-      return false;
-    }
-  }
-  if (filters.yearExact) {
-    if (Number(item.year) !== filters.yearExact) return false;
-  }
-  if (filters.yearRange) {
-    const year = Number(item.year);
-    if (!year || year < filters.yearRange.start || year > filters.yearRange.end) return false;
-  }
-  if (filters.country) {
-    const country = item.country?.toLowerCase() ?? "";
-    if (country && !country.includes(filters.country)) return false;
-  }
-  if (filters.lang) {
-    const language = item.language?.toLowerCase() ?? "";
-    if (language && !language.includes(filters.lang)) return false;
-  }
-  return true;
 }
 
 function scoreMatch(title: string, query: string) {
@@ -48,13 +19,12 @@ function scoreMatch(title: string, query: string) {
 }
 
 export function rankSuggestions(
-  query: ParsedQuery,
+  query: string,
   items: TitleRecord[],
   limit = 5
 ): Suggestion[] {
-  const filtered = items.filter((item) => matchesFilters(item, query.filters));
-  const scored = filtered.map((item) => {
-    const matchScore = scoreMatch(item.title, query.freeText);
+  const scored = items.map((item) => {
+    const matchScore = scoreMatch(item.title, query);
     const popularityBoost = (item.popularity ?? 0) / 100;
     const voteBoost = (item.votes ?? 0) / 100000;
     const rankBoost = item.tmdbRank ? (50 - item.tmdbRank) / 50 : 0;
@@ -69,12 +39,12 @@ export function rankSuggestions(
 
 export function applyFuse(
   fuse: Fuse<TitleRecord> | null,
-  query: ParsedQuery,
+  query: string,
   items: TitleRecord[]
 ): TitleRecord[] {
-  if (!query.freeText) return items;
+  if (!query) return items;
   if (!fuse) return items;
-  return fuse.search(query.freeText).map((result) => result.item);
+  return fuse.search(query).map((result) => result.item);
 }
 
 export function mapSuggestion(item: TitleRecord): Suggestion {

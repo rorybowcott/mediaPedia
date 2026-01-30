@@ -44,13 +44,6 @@ export function SearchInput() {
           <Settings className="h-4 w-4" />
         </Button>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span>Operators:</span>
-        <span>type:movie|series|documentary</span>
-        <span>year:2020 or year:2010-2020</span>
-        <span>country:uk</span>
-        <span>lang:en</span>
-      </div>
     </div>
   );
 }

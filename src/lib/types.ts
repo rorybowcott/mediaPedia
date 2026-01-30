@@ -30,19 +30,6 @@ export interface TitleRecord {
   fallbackLabel?: string | null;
 }
 
-export interface SearchOperatorFilters {
-  type?: TitleType | "movie" | "series" | "documentary";
-  yearExact?: number;
-  yearRange?: { start: number; end: number };
-  country?: string;
-  lang?: string;
-}
-
-export interface ParsedQuery {
-  freeText: string;
-  filters: SearchOperatorFilters;
-}
-
 export interface Suggestion {
   id: string;
   title: string;

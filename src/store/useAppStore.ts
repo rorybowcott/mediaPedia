@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { AppKeys, AppShortcuts, ParsedQuery, Suggestion, TitleRecord, TrendingSeed } from "../lib/types";
-import { parseQuery } from "../lib/operators";
+import type { AppKeys, AppShortcuts, Suggestion, TitleRecord, TrendingSeed } from "../lib/types";
 import {
   addRecentSearch,
   getSetting,
@@ -11,7 +10,7 @@ import {
   upsertTitle,
   upsertTrendingSeed
 } from "../lib/db";
-import { applyFuse, buildFuseIndex, mapSuggestion, rankSuggestions } from "../lib/search";
+import { applyFuse, buildFuseIndex, rankSuggestions } from "../lib/search";
 import {
   fetchOmdbDetails,
   fetchOmdbDetailsByTitle,
@@ -50,7 +49,6 @@ interface AppState {
   shortcuts: AppShortcuts;
   settingsOpen: boolean;
   query: string;
-  parsedQuery: ParsedQuery;
   suggestions: Suggestion[];
   selectionIndex: number;
   selectedId: string | null;
@@ -109,7 +107,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   shortcuts: DEFAULT_SHORTCUTS,
   settingsOpen: false,
   query: "",
-  parsedQuery: { freeText: "", filters: {} },
   suggestions: [],
   selectionIndex: 0,
   selectedId: null,
@@ -156,14 +153,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false, keysError: null }),
   setQuery: (value) => {
-    const parsedQuery = parseQuery(value);
-    set({ query: value, parsedQuery });
+    set({ query: value });
     get().updateLocalSuggestions();
   },
   updateLocalSuggestions: () => {
-    const { parsedQuery, localTitles, fuse } = get();
-    const filtered = applyFuse(fuse, parsedQuery, localTitles);
-    const suggestions = rankSuggestions(parsedQuery, filtered, 5);
+    const { query, localTitles, fuse } = get();
+    const trimmedQuery = query.trim();
+    const filtered = applyFuse(fuse, trimmedQuery, localTitles);
+    const suggestions = rankSuggestions(trimmedQuery, filtered, 5);
     const selectionIndex = Math.min(get().selectionIndex, Math.max(suggestions.length - 1, 0));
     set({ suggestions, selectionIndex });
   },
@@ -396,11 +393,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().updateLocalSuggestions();
   },
   fetchRemoteSuggestions: async () => {
-    const { parsedQuery, keys, keysValid } = get();
-    if (!parsedQuery.freeText || !keys.omdbKey || !keys.tmdbKey || !keysValid) return;
+    const { query, keys, keysValid } = get();
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery || !keys.omdbKey || !keys.tmdbKey || !keysValid) return;
     const [omdbResults, tmdbResults] = await Promise.all([
-      searchOmdb(parsedQuery.freeText, keys.omdbKey),
-      searchTmdb(parsedQuery.freeText, keys.tmdbKey)
+      searchOmdb(trimmedQuery, keys.omdbKey),
+      searchTmdb(trimmedQuery, keys.tmdbKey)
     ]);
     const merged = new Map<string, TitleRecord>();
     [...omdbResults, ...tmdbResults].forEach((item) => {
@@ -427,7 +425,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
     }
 
-    await addRecentSearch(parsedQuery.freeText);
+    await addRecentSearch(trimmedQuery);
     await get().rebuildIndex();
   }
 }));
