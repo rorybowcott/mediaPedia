@@ -109,11 +109,11 @@ function App() {
   }, [query, fetchRemoteSuggestions]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
       <Header />
       <SearchInput />
       {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
-      <ScrollArea className="mt-3 h-[300px]">
+      <ScrollArea className="mt-3 flex-1">
         {view === "detail" ? (
           <DetailView />
         ) : query.trim() ? (

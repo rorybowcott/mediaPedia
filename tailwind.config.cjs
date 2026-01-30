@@ -5,18 +5,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: "hsl(222, 47%, 11%)",
-        foreground: "hsl(210, 40%, 98%)",
-        card: "hsl(222, 47%, 14%)",
-        "card-foreground": "hsl(210, 40%, 98%)",
-        muted: "hsl(217, 19%, 27%)",
-        "muted-foreground": "hsl(215, 20%, 65%)",
-        accent: "hsl(212, 94%, 53%)",
-        "accent-foreground": "hsl(210, 40%, 98%)",
-        border: "hsl(217, 19%, 27%)"
-      },
-      boxShadow: {
-        glow: "0 10px 30px rgba(14, 116, 144, 0.35)"
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        card: "var(--card)",
+        "card-foreground": "var(--card-foreground)",
+        popover: "var(--popover)",
+        "popover-foreground": "var(--popover-foreground)",
+        primary: "var(--primary)",
+        "primary-foreground": "var(--primary-foreground)",
+        secondary: "var(--secondary)",
+        "secondary-foreground": "var(--secondary-foreground)",
+        muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
+        accent: "var(--accent)",
+        "accent-foreground": "var(--accent-foreground)",
+        destructive: "var(--destructive)",
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)"
       }
     }
   },
