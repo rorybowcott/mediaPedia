@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useAppStore } from "../store/useAppStore";
 import type { AppShortcuts } from "../lib/types";
-import { CornerDownLeft, Ban } from "lucide-react";
+import { Check, CornerDownLeft, Ban, X } from "lucide-react";
 
 const DEFAULT_SHORTCUTS: AppShortcuts = {
   globalSearch: "CommandOrControl+K",
@@ -24,15 +24,17 @@ export function SettingsModal() {
 
   const [omdbKey, setOmdbKey] = useState(keys.omdbKey ?? "");
   const [tmdbKey, setTmdbKey] = useState(keys.tmdbKey ?? "");
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [keysSavedAt, setKeysSavedAt] = useState<number | null>(null);
   const [shortcutDraft, setShortcutDraft] = useState<AppShortcuts>(DEFAULT_SHORTCUTS);
   const [recordingKey, setRecordingKey] = useState<keyof AppShortcuts | null>(null);
+  const [showOmdbKey, setShowOmdbKey] = useState(false);
+  const [showTmdbKey, setShowTmdbKey] = useState(false);
 
   useEffect(() => {
     if (settingsOpen) {
       setOmdbKey(keys.omdbKey ?? "");
       setTmdbKey(keys.tmdbKey ?? "");
-      setStatusMessage(null);
+      setKeysSavedAt(null);
       setShortcutDraft(shortcuts);
     }
   }, [keys, settingsOpen, shortcuts]);
@@ -42,7 +44,7 @@ export function SettingsModal() {
     const handle = window.setTimeout(async () => {
       if (!omdbKey && !tmdbKey) return;
       await saveKeys({ omdbKey, tmdbKey }, { close: false });
-      setStatusMessage("Settings saved.");
+      setKeysSavedAt(Date.now());
     }, 700);
     return () => window.clearTimeout(handle);
   }, [omdbKey, tmdbKey, saveKeys, settingsOpen]);
@@ -51,7 +53,6 @@ export function SettingsModal() {
     if (!settingsOpen) return;
     const handle = window.setTimeout(async () => {
       await setShortcuts(shortcutDraft);
-      setStatusMessage("Settings saved.");
     }, 500);
     return () => window.clearTimeout(handle);
   }, [shortcutDraft, setShortcuts, settingsOpen]);
@@ -143,30 +144,64 @@ export function SettingsModal() {
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="text-xs uppercase text-muted-foreground">OMDb API Key</label>
-            <Input
-              value={omdbKey}
-              onChange={(event) => {
-                setOmdbKey(event.target.value);
-                setStatusMessage(null);
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <label className="text-xs pt-2  text-muted-foreground">OMDb API Key</label>
+              {keysError?.omdb && omdbKey ? (
+                <X className="h-3.5 w-3.5 text-red-400" />
+              ) : keysSavedAt && !keysError?.omdb && omdbKey ? (
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+              ) : null}
+            </div>
+            <div className="relative">
+              <Input
+                type={showOmdbKey ? "text" : "password"}
+                value={omdbKey}
+                onChange={(event) => {
+                  setOmdbKey(event.target.value);
+                  setKeysSavedAt(null);
+                }}
+                className="pr-14"
+              />
+              <button
+                type="button"
+                onClick={() => setShowOmdbKey((prev) => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                {showOmdbKey ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
           <div>
-            <label className="text-xs uppercase text-muted-foreground">TMDB API Key</label>
-            <Input
-              value={tmdbKey}
-              onChange={(event) => {
-                setTmdbKey(event.target.value);
-                setStatusMessage(null);
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <label className="text-xs  text-muted-foreground">TMDB API Key</label>
+              {keysError?.tmdb && tmdbKey ? (
+                <X className="h-3.5 w-3.5 text-red-400" />
+              ) : keysSavedAt && !keysError?.tmdb && tmdbKey ? (
+                <Check className="h-3.5 w-3.5 text-emerald-400" />
+              ) : null}
+            </div>
+            <div className="relative">
+              <Input
+                type={showTmdbKey ? "text" : "password"}
+                value={tmdbKey}
+                onChange={(event) => {
+                  setTmdbKey(event.target.value);
+                  setKeysSavedAt(null);
+                }}
+                className="pr-14"
+              />
+              <button
+                type="button"
+                onClick={() => setShowTmdbKey((prev) => !prev)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                {showTmdbKey ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
-          {keysError ? <p className="text-sm text-red-400">{keysError}</p> : null}
-          {statusMessage ? <p className="text-sm text-emerald-400">{statusMessage}</p> : null}
         </div>
         <div className="mt-6 space-y-3">
-          <div className="text-sm font-semibold">Keyboard Shortcuts</div>
+          <div className="text-lg font-semibold">Keyboard Shortcuts</div>
           <div className="space-y-2">
             {(
               [

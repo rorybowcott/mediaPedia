@@ -89,7 +89,9 @@ export function DetailView() {
                 <Button
                   variant="outline"
                   className="border-transparent gap-2 p-0.5 pl-2 pr-2"
-                  onClick={() => openLink(trailerUrl(detail.title, detail.year))}
+                  onClick={() =>
+                    openLink(trailerUrl(detail.title, detail.year))
+                  }
                 >
                   Trailers <ExternalLink className="h-4 w-4" />
                 </Button>
@@ -274,7 +276,7 @@ export function DetailView() {
         </div>
 
         <div className="min-[650px]:col-span-2">
-          <Card className="border-border/70 bg-card/60 shadow-lg">
+          <Card className="border-border/70 bg-card/60 mb-5 shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">Metadata</div>
             </CardHeader>

@@ -45,7 +45,7 @@ function formatInvokeError(error: unknown, fallback: string) {
 interface AppState {
   keys: AppKeys;
   keysValid: boolean;
-  keysError: string | null;
+  keysError: { omdb?: string | null; tmdb?: string | null } | null;
   shortcuts: AppShortcuts;
   settingsOpen: boolean;
   query: string;
@@ -310,23 +310,36 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   testKeys: async (keys) => {
     set({ keysError: null });
-    if (!keys.omdbKey || !keys.tmdbKey) {
-      set({ keysError: "Both keys are required." });
+    let omdbError: string | null = null;
+    let tmdbError: string | null = null;
+
+    if (!keys.omdbKey) omdbError = "OMDb key is required.";
+    if (!keys.tmdbKey) tmdbError = "TMDB key is required.";
+    if (omdbError || tmdbError) {
+      set({ keysError: { omdb: omdbError, tmdb: tmdbError } });
       return false;
     }
+
     try {
       const [omdbStatus, tmdbStatus] = await Promise.all([
         validateOmdbKey(keys.omdbKey),
         validateTmdbKey(keys.tmdbKey)
       ]);
-      if (!omdbStatus.ok || !tmdbStatus.ok) {
-        set({ keysError: omdbStatus.message ?? tmdbStatus.message ?? "Key validation failed." });
+      if (!omdbStatus.ok) {
+        omdbError = omdbStatus.message ?? "OMDb key validation failed.";
+      }
+      if (!tmdbStatus.ok) {
+        tmdbError = tmdbStatus.message ?? "TMDB key validation failed.";
+      }
+      if (omdbError || tmdbError) {
+        set({ keysError: { omdb: omdbError, tmdb: tmdbError } });
         return false;
       }
       set({ keysError: null });
       return true;
     } catch (error) {
-      set({ keysError: formatInvokeError(error, "Key validation failed.") });
+      const message = formatInvokeError(error, "Key validation failed.");
+      set({ keysError: { omdb: message, tmdb: message } });
       return false;
     }
   },
