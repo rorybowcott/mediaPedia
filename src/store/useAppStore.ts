@@ -220,7 +220,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       runtime: preferValue(omdbData.runtime, base?.runtime),
       rating: preferValue(omdbData.rating, base?.rating),
       votes: preferValue(omdbData.votes, base?.votes),
-      posterUrl: preferValue(omdbData.posterUrl, base?.posterUrl),
+      // Prefer TMDB poster already on the record; only use OMDb if none.
+      posterUrl: preferValue(base?.posterUrl, omdbData.posterUrl),
       backdropUrl: preferValue(base?.backdropUrl ?? null, null),
       genres: preferValue(omdbData.genres, base?.genres),
       plot: preferValue(omdbData.plot, base?.plot),

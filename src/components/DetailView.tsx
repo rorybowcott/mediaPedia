@@ -1,4 +1,4 @@
-import { ArrowLeft, ExternalLink, RefreshCcw, Calendar, Clock3, Star } from "lucide-react";
+import { ArrowLeft, ExternalLink, Calendar, Clock3, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -16,7 +16,6 @@ export function DetailView() {
   const detail = useAppStore((state) => state.detail);
   const detailLoading = useAppStore((state) => state.detailLoading);
   const backToList = useAppStore((state) => state.backToList);
-  const refreshDetails = useAppStore((state) => state.refreshDetails);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -63,14 +62,23 @@ export function DetailView() {
         <Button variant="ghost" onClick={backToList} className="gap-2">
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {detail.imdbId ? (
-            <Button variant="secondary" className="gap-2" onClick={() => openLink(imdbUrl(detail.imdbId!))}>
-              IMDb <ExternalLink className="h-3 w-3" />
+            <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(imdbUrl(detail.imdbId!))}>
+              IMDb
             </Button>
           ) : null}
-          <Button variant="ghost" onClick={() => refreshDetails(detail.id)} className="gap-2">
-            <RefreshCcw className="h-4 w-4" /> Refresh
+          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(rottenTomatoesUrl(detail.title))}>
+            Rotten Tomatoes
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(metacriticUrl(detail.title))}>
+            Metacritic
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(wikipediaUrl(detail.title, detail.year))}>
+            Wikipedia
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 p-0.5 pl-2 pr-2" onClick={() => openLink(trailerUrl(detail.title, detail.year))}>
+            Trailer
           </Button>
         </div>
       </div>
@@ -91,16 +99,11 @@ export function DetailView() {
                         {formatYear(detail.year)}
                       </Badge>
                     ) : null}
-                    {detail.rating ? (
-                      <Badge variant="secondary" className="rounded-full px-3">
-                        IMDb {detail.rating}
-                      </Badge>
-                    ) : null}
                   </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="mx-auto h-[320px] w-[220px] overflow-hidden rounded-2xl bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
                 {detail.posterUrl ? (
                   <img src={detail.posterUrl} alt={detail.title} className="h-full w-full object-cover" />
@@ -134,7 +137,7 @@ export function DetailView() {
         <div className="space-y-4 min-[650px]:col-span-1">
           <Card className="border-border/70 bg-card/60 shadow-lg">
             <CardHeader>
-              <div className="text-sm font-semibold">Key Stats</div>
+              <div className="text-sm font-semibold pb-4">Key Stats</div>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
@@ -164,7 +167,7 @@ export function DetailView() {
 
           <Card className="border-border/70 bg-card/60 shadow-lg">
             <CardHeader>
-              <div className="text-sm font-semibold">Ratings</div>
+              <div className="text-sm font-semibold pb-4">Ratings</div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="rounded-xl border border-border/70 bg-background/40 p-3">
@@ -197,7 +200,7 @@ export function DetailView() {
 
           <Card className="border-border/70 bg-card/60 shadow-lg">
             <CardHeader>
-              <div className="text-sm font-semibold">People</div>
+              <div className="text-sm font-semibold pb-4">People</div>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div>
@@ -231,7 +234,7 @@ export function DetailView() {
         <div className="min-[650px]:col-span-2">
           <Card className="border-border/70 bg-card/60 shadow-lg">
             <CardHeader>
-              <div className="text-sm font-semibold">Metadata</div>
+              <div className="text-sm font-semibold pb-4">Metadata</div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
@@ -245,24 +248,6 @@ export function DetailView() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">IMDb ID</span>
                 <span className="font-mono text-xs">{detail.imdbId ?? "—"}</span>
-              </div>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button variant="outline" size="sm" onClick={() => openLink(rottenTomatoesUrl(detail.title))}>
-                  Rotten Tomatoes
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openLink(metacriticUrl(detail.title))}>
-                  Metacritic
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openLink(wikipediaUrl(detail.title, detail.year))}
-                >
-                  Wikipedia
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => openLink(trailerUrl(detail.title, detail.year))}>
-                  Trailer
-                </Button>
               </div>
             </CardContent>
           </Card>
