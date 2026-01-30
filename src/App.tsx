@@ -38,6 +38,7 @@ function App() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isAdjustingResize = useRef(false);
   const lastBounds = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const previousQuery = useRef(query);
 
   const trendingSuggestions = useMemo(
     () => buildTrendingSuggestions(trending),
@@ -293,15 +294,19 @@ function App() {
     debounced();
   }, [query, fetchRemoteSuggestions]);
 
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (view === "detail" && trimmed && query !== previousQuery.current) {
+      backToList();
+    }
+    previousQuery.current = query;
+  }, [query, view, backToList]);
+
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden rounded-[20px] bg-background text-foreground">
       <Header />
-      {view !== "detail" ? (
-        <>
-          <SearchInput />
-          {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
-        </>
-      ) : null}
+      <SearchInput />
+      {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
       <ScrollArea className="mt-3 flex-1">
         {view === "detail" ? (
           <DetailView />
