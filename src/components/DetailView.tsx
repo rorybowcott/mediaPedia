@@ -68,7 +68,13 @@ export function DetailView() {
   return (
     <div className="px-5 py-4">
       <div className="mb-4 flex items-center justify-between">
-        <Button variant="ghost" onClick={backToList} className="gap-2">
+        <Button
+          variant="ghost"
+          onClick={backToList}
+          className="gap-2"
+          title="Back (Esc)"
+          aria-keyshortcuts="Escape"
+        >
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
         <div className="flex flex-wrap items-center gap-2">
@@ -192,6 +198,8 @@ export function DetailView() {
                     variant="outline"
                     className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
                     onClick={() => openLink(imdbUrl(detail.imdbId!))}
+                    title="IMDb (Cmd/Ctrl+O)"
+                    aria-keyshortcuts="Control+O Meta+O"
                   >
                     IMDb
                   </Button>{" "}

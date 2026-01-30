@@ -4,7 +4,6 @@ fn main() {
             "get_keys",
             "set_keys",
             "reset_keys",
-            "toggle_tray",
         ]),
     );
 

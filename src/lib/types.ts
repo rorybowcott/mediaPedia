@@ -73,7 +73,6 @@ export interface AppKeys {
 
 export interface AppShortcuts {
   globalSearch: string;
-  togglePinned: string;
   refreshDetails: string;
   openImdb: string;
 }

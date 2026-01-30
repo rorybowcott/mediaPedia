@@ -85,25 +85,6 @@ export async function listTitles(): Promise<TitleRecord[]> {
   return rows.map(mapTitleRow);
 }
 
-export async function listPinned(): Promise<string[]> {
-  const db = await getDb();
-  const rows = await db.select<Record<string, unknown>[]>("SELECT title_id FROM pinned ORDER BY created_at DESC", []);
-  return rows.map((row) => String(row.title_id));
-}
-
-export async function setPinned(titleId: string, pinned: boolean) {
-  const db = await getDb();
-  const now = Math.floor(Date.now() / 1000);
-  if (pinned) {
-    await db.execute(
-      "INSERT INTO pinned (title_id, created_at, updated_at) VALUES (?, ?, ?) ON CONFLICT(title_id) DO UPDATE SET updated_at = excluded.updated_at",
-      [titleId, now, now]
-    );
-  } else {
-    await db.execute("DELETE FROM pinned WHERE title_id = ?", [titleId]);
-  }
-}
-
 export async function listRecentSearches(): Promise<string[]> {
   const db = await getDb();
   const rows = await db.select<Record<string, unknown>[]>(

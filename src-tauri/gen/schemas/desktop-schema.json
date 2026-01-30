@@ -405,12 +405,6 @@
           "markdownDescription": "Enables the set_keys command without any pre-configured scope."
         },
         {
-          "description": "Enables the toggle_tray command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-toggle-tray",
-          "markdownDescription": "Enables the toggle_tray command without any pre-configured scope."
-        },
-        {
           "description": "Denies the get_keys command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-keys",
@@ -427,12 +421,6 @@
           "type": "string",
           "const": "deny-set-keys",
           "markdownDescription": "Denies the set_keys command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the toggle_tray command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-toggle-tray",
-          "markdownDescription": "Denies the toggle_tray command without any pre-configured scope."
         },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",

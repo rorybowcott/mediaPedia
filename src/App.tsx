@@ -1,16 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getCurrentWindow, LogicalPosition } from "@tauri-apps/api/window";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useAppStore } from "./store/useAppStore";
 import { SearchInput } from "./components/SearchInput";
 import { SuggestionsList } from "./components/SuggestionsList";
-import { PinnedSection } from "./components/PinnedSection";
 import { TrendingSection } from "./components/TrendingSection";
 import { DetailView } from "./components/DetailView";
 import { SettingsModal } from "./components/SettingsModal";
+import { ShortcutsModal } from "./components/ShortcutsModal";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Header } from "./components/Header";
 import { debounce } from "./lib/utils";
+import { buildTrendingSuggestions } from "./lib/suggestions";
 
 const REMOTE_SEARCH_DEBOUNCE = 250;
 const appWindow = getCurrentWindow();
@@ -26,14 +27,27 @@ function App() {
   const selectSuggestion = useAppStore((state) => state.selectSuggestion);
   const query = useAppStore((state) => state.query);
   const refreshDetails = useAppStore((state) => state.refreshDetails);
-  const togglePinned = useAppStore((state) => state.togglePinned);
   const openImdb = useAppStore((state) => state.openImdb);
+  const openSettings = useAppStore((state) => state.openSettings);
+  const settingsOpen = useAppStore((state) => state.settingsOpen);
   const errorMessage = useAppStore((state) => state.errorMessage);
   const fetchRemoteSuggestions = useAppStore((state) => state.fetchRemoteSuggestions);
   const refreshTrending = useAppStore((state) => state.refreshTrending);
   const backToList = useAppStore((state) => state.backToList);
+  const trending = useAppStore((state) => state.trending);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isAdjustingResize = useRef(false);
   const lastBounds = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  const trendingSuggestions = useMemo(
+    () => buildTrendingSuggestions(trending),
+    [trending]
+  );
+  const hasQuery = Boolean(query.trim());
+  const navigationSuggestions = useMemo(
+    () => (hasQuery ? suggestions : [...trendingSuggestions]),
+    [hasQuery, suggestions, trendingSuggestions]
+  );
 
   const matchesShortcut = (event: KeyboardEvent, shortcut: string) => {
     const parts = shortcut.split("+").map((part) => part.trim().toLowerCase()).filter(Boolean);
@@ -82,7 +96,29 @@ function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.isComposing) return;
+      const target = event.target as HTMLElement | null;
+      const isEditableTarget =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      const isSearchInput = target?.getAttribute("data-search-input") === "true";
+
+      if ((settingsOpen || shortcutsOpen) && event.key !== "Escape") {
+        return;
+      }
+
+      if (isEditableTarget && !isSearchInput) {
+        return;
+      }
+
       if (event.key === "Escape") {
+        if (settingsOpen) return;
+        if (shortcutsOpen) {
+          setShortcutsOpen(false);
+          return;
+        }
         if (view === "detail") {
           backToList();
         } else {
@@ -90,24 +126,27 @@ function App() {
         }
       }
 
-      if (event.key === "ArrowDown") {
+      const hasNavigation = navigationSuggestions.length > 0;
+
+      if (view === "list" && hasNavigation && event.key === "ArrowDown") {
         event.preventDefault();
-        setSelectionIndex(Math.min(selectionIndex + 1, suggestions.length - 1));
+        const maxIndex = Math.max(navigationSuggestions.length - 1, 0);
+        setSelectionIndex(Math.min(selectionIndex + 1, maxIndex));
       }
-      if (event.key === "ArrowUp") {
+      if (view === "list" && hasNavigation && event.key === "ArrowUp") {
         event.preventDefault();
         setSelectionIndex(Math.max(selectionIndex - 1, 0));
       }
-      if (event.key === "Enter") {
-        const selected = suggestions[selectionIndex];
+      if (view === "list" && hasNavigation && event.key === "Enter") {
+        const selected = navigationSuggestions[selectionIndex];
         if (selected) {
           selectSuggestion(selected.id);
         }
       }
 
-      if (matchesShortcut(event, shortcuts.togglePinned)) {
+      if (matchesShortcut(event, shortcuts.globalSearch)) {
         event.preventDefault();
-        togglePinned();
+        window.dispatchEvent(new Event("focus-search"));
       }
       if (matchesShortcut(event, shortcuts.refreshDetails)) {
         event.preventDefault();
@@ -117,20 +156,46 @@ function App() {
         event.preventDefault();
         openImdb();
       }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === ",") {
+        event.preventDefault();
+        openSettings();
+      }
+
+      if (!isEditableTarget && event.key === "?") {
+        event.preventDefault();
+        setShortcutsOpen((prev) => !prev);
+      }
+
+      if (!isEditableTarget && (event.metaKey || event.ctrlKey) && event.key === "/") {
+        event.preventDefault();
+        setShortcutsOpen((prev) => !prev);
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
-    suggestions,
+    navigationSuggestions,
     selectionIndex,
     selectSuggestion,
     setSelectionIndex,
-    togglePinned,
     refreshDetails,
     openImdb,
+    openSettings,
+    shortcuts,
     view,
-    backToList
+    backToList,
+    settingsOpen,
+    shortcutsOpen
   ]);
+
+  useEffect(() => {
+    if (view !== "list") return;
+    const maxIndex = Math.max(navigationSuggestions.length - 1, 0);
+    if (selectionIndex > maxIndex) {
+      setSelectionIndex(maxIndex);
+    }
+  }, [navigationSuggestions.length, selectionIndex, setSelectionIndex, view]);
 
   useEffect(() => {
     const onPointerRelease = async () => {
@@ -240,16 +305,27 @@ function App() {
       <ScrollArea className="mt-3 flex-1">
         {view === "detail" ? (
           <DetailView />
-        ) : query.trim() ? (
-          <SuggestionsList suggestions={suggestions} selectionIndex={selectionIndex} onSelect={selectSuggestion} />
+        ) : hasQuery ? (
+          <SuggestionsList
+            suggestions={suggestions}
+            selectionIndex={selectionIndex}
+            onSelect={selectSuggestion}
+            listId="search-results"
+            listLabel="Search results"
+          />
         ) : (
           <div className="space-y-6 pb-6">
-            <PinnedSection />
-            <TrendingSection />
+            <TrendingSection
+              suggestions={trendingSuggestions}
+              selectionIndex={selectionIndex}
+              selectionOffset={0}
+              onSelect={selectSuggestion}
+            />
           </div>
         )}
       </ScrollArea>
       <SettingsModal />
+      <ShortcutsModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }

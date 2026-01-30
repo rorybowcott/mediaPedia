@@ -9,7 +9,6 @@ import { CornerDownLeft, Ban } from "lucide-react";
 
 const DEFAULT_SHORTCUTS: AppShortcuts = {
   globalSearch: "CommandOrControl+K",
-  togglePinned: "CommandOrControl+P",
   refreshDetails: "CommandOrControl+R",
   openImdb: "CommandOrControl+O"
 };
@@ -172,7 +171,6 @@ export function SettingsModal() {
             {(
               [
                 ["globalSearch", "Global Search"],
-                ["togglePinned", "Toggle Pin"],
                 ["refreshDetails", "Refresh Details"],
                 ["openImdb", "Open IMDb"]
               ] as Array<[keyof AppShortcuts, string]>

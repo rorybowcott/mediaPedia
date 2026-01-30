@@ -1,16 +1,8 @@
-import { Settings, Pin } from "lucide-react";
-import { Button } from "./ui/button";
-import { useAppStore } from "../store/useAppStore";
-import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const appWindow = getCurrentWindow();
 
 export function Header() {
-  const openSettings = useAppStore((state) => state.openSettings);
-  const togglePinned = useAppStore((state) => state.togglePinned);
-  const selectedId = useAppStore((state) => state.selectedId);
-
   const handleDragStart = () => {
     appWindow.startDragging();
   };
@@ -21,38 +13,8 @@ export function Header() {
       data-tauri-drag-region
       onPointerDown={handleDragStart}
     >
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">MediaPedia</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          className="h-9 w-9 p-0"
-          data-tauri-drag-region="false"
-          onClick={() => togglePinned(selectedId)}
-          title="Pin / unpin (Cmd/Ctrl+P)"
-        >
-          <Pin className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          className="h-9 w-9 p-0"
-          data-tauri-drag-region="false"
-          onClick={() => invoke("toggle_tray")}
-          title="Toggle tray"
-        >
-          <span className="text-xs font-semibold">Tray</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className="h-9 w-9 p-0"
-          data-tauri-drag-region="false"
-          onClick={openSettings}
-          title="Settings"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
-      </div>
+      <div />
+      <div />
     </div>
   );
 }

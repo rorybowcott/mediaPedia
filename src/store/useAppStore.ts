@@ -5,10 +5,8 @@ import {
   addRecentSearch,
   getSetting,
   getTitleById,
-  listPinned,
   listTitles,
   listTrendingSeeds,
-  setPinned,
   setSetting,
   upsertTitle,
   upsertTrendingSeed
@@ -59,7 +57,6 @@ interface AppState {
   detail: TitleRecord | null;
   detailLoading: boolean;
   view: "list" | "detail";
-  pinnedIds: string[];
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
   lastRefresh: number | null;
@@ -73,7 +70,6 @@ interface AppState {
   setSelectionIndex: (value: number) => void;
   selectSuggestion: (id: string) => Promise<void>;
   backToList: () => void;
-  togglePinned: (id?: string | null) => Promise<void>;
   refreshDetails: (id?: string | null) => Promise<void>;
   openImdb: () => Promise<void>;
   testKeys: (keys: AppKeys) => Promise<boolean>;
@@ -89,7 +85,6 @@ const CACHE_EXPIRY_SECONDS = 60 * 60 * 24 * 40;
 const TRENDING_REFRESH_SECONDS = 60 * 60 * 24;
 const DEFAULT_SHORTCUTS: AppShortcuts = {
   globalSearch: "CommandOrControl+K",
-  togglePinned: "CommandOrControl+P",
   refreshDetails: "CommandOrControl+R",
   openImdb: "CommandOrControl+O"
 };
@@ -121,7 +116,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   detail: null,
   detailLoading: false,
   view: "list",
-  pinnedIds: [],
   trending: [],
   localTitles: [],
   lastRefresh: null,
@@ -139,10 +133,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         shortcuts = DEFAULT_SHORTCUTS;
       }
     }
-    const pinnedIds = await listPinned();
     const localTitles = await listTitles();
     const trending = await listTrendingSeeds();
-    set({ keys, shortcuts, pinnedIds, localTitles, trending });
+    set({ keys, shortcuts, localTitles, trending });
     get().rebuildIndex();
 
     const lastRefresh = await getSetting("last_trending_refresh");
@@ -181,14 +174,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     await get().refreshDetails(id);
   },
   backToList: () => set({ view: "list", detailLoading: false }),
-  togglePinned: async (id) => {
-    const targetId = id ?? get().selectedId;
-    if (!targetId) return;
-    const isPinned = get().pinnedIds.includes(targetId);
-    await setPinned(targetId, !isPinned);
-    const pinnedIds = await listPinned();
-    set({ pinnedIds });
-  },
   refreshDetails: async (id) => {
     const targetId = id ?? get().selectedId;
     if (!targetId) return;
