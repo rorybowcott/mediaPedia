@@ -353,28 +353,26 @@ export function DetailView() {
           </Card>
         </div>
 
-        <div className="min-[650px]:col-span-2">
-          <Card className="border-border/70 bg-card/60 mb-5 shadow-lg">
-            <CardHeader>
-              <div className="text-sm font-semibold pb-4">Metadata</div>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Language</span>
-                <span>{detail.language ?? "—"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Country</span>
-                <span>{detail.country ?? "—"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">IMDb ID</span>
-                <span className="font-mono text-xs">
-                  {detail.imdbId ?? "—"}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="min-[650px]:col-span-2 space-y-5 pt-8 pb-6">
+          <div className="mx-auto w-full max-w-xl space-y-5">
+            <Separator />
+            <div className="space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Language</span>
+              <span>{detail.language ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Country</span>
+              <span>{detail.country ?? "—"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">IMDb ID</span>
+              <span className="font-mono text-xs">
+                {detail.imdbId ?? "—"}
+              </span>
+            </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
