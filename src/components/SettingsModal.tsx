@@ -103,7 +103,7 @@ export function SettingsModal() {
     };
     if (isRecording) {
       return (
-        <KbdGroup>
+        <KbdGroup className="border-0 bg-transparent p-0">
           <Kbd>Press keys…</Kbd>
         </KbdGroup>
       );
@@ -111,14 +111,14 @@ export function SettingsModal() {
 
     if (!parts.length) {
       return (
-        <KbdGroup>
+        <KbdGroup className="border-0 bg-transparent p-0">
           <Kbd className="text-muted-foreground">Blank</Kbd>
         </KbdGroup>
       );
     }
 
     return (
-      <KbdGroup>
+      <KbdGroup className="border-0 bg-transparent p-0">
         {parts.map((part, index) => (
           <div key={`${shortcut}-${part}`} className="flex items-center gap-1">
             <Kbd>{mapPart(part)}</Kbd>
@@ -209,7 +209,7 @@ export function SettingsModal() {
               </div>
             </div>
           </section>
-          <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-lg">
+          <div>
             <div className="text-sm font-semibold">Keyboard Shortcuts</div>
             <div className="mt-3 space-y-2">
               {(
@@ -217,35 +217,35 @@ export function SettingsModal() {
                   ["globalSearch", "Global Search"],
                   ["refreshDetails", "Refresh Details"],
                   ["openImdb", "Open IMDb"]
-              ] as Array<[keyof AppShortcuts, string]>
-            ).map(([key, label]) => (
-              <div
-                key={key}
-                className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card/50 px-3 py-3"
-              >
-                <div className="text-sm">{label}</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShortcutDraft((prev) => ({ ...prev, [key]: "" }))}
-                    className="rounded-lg border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
-                    aria-label={`Clear ${label} shortcut`}
-                  >
-                    ✕
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRecordingKey(key)}
-                    className="rounded-lg border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
-                    aria-label={`Edit ${label} shortcut`}
-                  >
-                    {renderShortcut(shortcutDraft[key], recordingKey === key)}
-                  </button>
+                ] as Array<[keyof AppShortcuts, string]>
+              ).map(([key, label]) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card/50 px-3 py-3"
+                >
+                  <div className="text-sm">{label}</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShortcutDraft((prev) => ({ ...prev, [key]: "" }))}
+                      className="rounded-lg border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                      aria-label={`Clear ${label} shortcut`}
+                    >
+                      ✕
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecordingKey(key)}
+                      className="rounded-lg border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                      aria-label={`Edit ${label} shortcut`}
+                    >
+                      {renderShortcut(shortcutDraft[key], recordingKey === key)}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
             </div>
-          </section>
+          </div>
         </div>
         <DialogFooter className="mt-6">
           <Button variant="ghost" onClick={closeSettings} className="h-8 gap-1 px-5 text-sm">
