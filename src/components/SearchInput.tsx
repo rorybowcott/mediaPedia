@@ -30,6 +30,9 @@ export function SearchInput() {
           onChange={(event) => setQuery(event.target.value)}
           placeholder={keysValid ? "Search films, TV shows, documentaries…" : "Add keys to unlock search"}
           disabled={!keysValid}
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="none"
           aria-label="Search titles"
           aria-autocomplete="list"
           data-search-input="true"

@@ -160,6 +160,9 @@ export function SettingsModal() {
                   setOmdbKey(event.target.value);
                   setKeysSavedAt(null);
                 }}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
                 className="pr-14"
               />
               <button
@@ -188,6 +191,9 @@ export function SettingsModal() {
                   setTmdbKey(event.target.value);
                   setKeysSavedAt(null);
                 }}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="none"
                 className="pr-14"
               />
               <button

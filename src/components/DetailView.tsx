@@ -70,7 +70,7 @@ export function DetailView() {
 
       <div className="grid gap-4 min-[650px]:grid-cols-2">
         <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-card/60 shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.16))] shadow-lg">
             <CardHeader className="space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -136,12 +136,12 @@ export function DetailView() {
         </div>
 
         <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-card/60 shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.22))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">Key Stats</div>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Clock3 className="h-4 w-4" /> Runtime
                 </div>
@@ -149,7 +149,7 @@ export function DetailView() {
                   {formatRuntime(detail.runtime)}
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Calendar className="h-4 w-4" /> Released
                 </div>
@@ -157,7 +157,7 @@ export function DetailView() {
                   {formatYear(detail.year)}
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Star className="h-4 w-4" /> IMDb Rating
                 </div>
@@ -165,7 +165,7 @@ export function DetailView() {
                   {detail.rating ?? "—"}
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
                 <div className="text-xs uppercase text-muted-foreground">
                   IMDb Votes
                 </div>
@@ -176,7 +176,7 @@ export function DetailView() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 bg-card/60 shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.22))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">Ratings</div>
             </CardHeader>
@@ -232,7 +232,7 @@ export function DetailView() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 bg-card/60 shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.22))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">People</div>
             </CardHeader>
