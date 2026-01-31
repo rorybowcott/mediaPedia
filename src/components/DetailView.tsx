@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { ExternalLink, Calendar, Clock3, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
@@ -21,6 +22,8 @@ const appWindow = getCurrentWindow();
 export function DetailView() {
   const detail = useAppStore((state) => state.detail);
   const detailLoading = useAppStore((state) => state.detailLoading);
+  const posterRef = useRef<HTMLDivElement>(null);
+  const [posterTilt, setPosterTilt] = useState({ x: 0, y: 0, glow: 0 });
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -50,7 +53,7 @@ export function DetailView() {
     value: string | null,
     ratio: number | null,
   ) => (
-    <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[inset_0_1px_6px_rgba(0,0,0,0.35)]">
+    <div className="rounded-xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-3 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
       <div className="flex items-center justify-between text-xs uppercase text-muted-foreground">
         <div className="text-xs uppercase text-muted-foreground">{label}</div>
         <span className="text-sm font-semibold text-foreground">
@@ -103,6 +106,17 @@ export function DetailView() {
     await open(url);
     await appWindow.hide();
   };
+  const handlePosterMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = posterRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    const tiltX = Math.max(-10, Math.min(10, -y * 16));
+    const tiltY = Math.max(-12, Math.min(12, x * 18));
+    const glow = Math.min(0.45, Math.hypot(x, y) * 0.8);
+    setPosterTilt({ x: tiltX, y: tiltY, glow });
+  };
+  const handlePosterLeave = () => setPosterTilt({ x: 0, y: 0, glow: 0 });
 
   return (
     <div className="px-5">
@@ -138,14 +152,37 @@ export function DetailView() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
-              <div className="mx-auto h-[320px] w-[220px] overflow-hidden rounded-2xl bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
+              <div
+                ref={posterRef}
+                onMouseMove={handlePosterMove}
+                onMouseLeave={handlePosterLeave}
+                className="mx-auto h-[320px] w-[220px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out"
+                style={{
+                  transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
+                  transformStyle: "preserve-3d",
+                  boxShadow: `0 20px 50px rgba(0,0,0,0.35), 0 0 30px rgba(200,200,200,${posterTilt.glow})`
+                }}
+              >
+                <div
+                  className="relative h-full w-full overflow-hidden rounded-2xl"
+                  style={{ transform: "scale(1)", transformStyle: "preserve-3d" }}
+                >
                 {detail.posterUrl ? (
                   <img
                     src={detail.posterUrl}
                     alt={detail.title}
                     className="h-full w-full object-cover"
+                    style={{ backfaceVisibility: "hidden" }}
                   />
                 ) : null}
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-2xl"
+                    style={{
+                      boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 35px rgba(0,0,0,0.35)"
+                    }}
+                    aria-hidden="true"
+                  />
+                </div>
               </div>
               <Separator />
               <div className="space-y-2 text-sm">

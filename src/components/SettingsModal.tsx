@@ -81,7 +81,6 @@ export function SettingsModal() {
       const combo = [...parts, key].join("+");
       setShortcutDraft((prev) => ({ ...prev, [recordingKey]: combo }));
       setRecordingKey(null);
-      setStatusMessage("Settings saved.");
     };
 
     window.addEventListener("keydown", onKeyDown, true);
@@ -136,84 +135,88 @@ export function SettingsModal() {
     <Dialog open={settingsOpen} onOpenChange={(open) => (!open ? closeSettings() : null)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>API Keys</DialogTitle>
-          <DialogDescription>
-            Paste your OMDb and TMDB keys to unlock search and trending. Keys are stored securely in the
-            OS keychain.
-          </DialogDescription>
+          <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs pt-2  text-muted-foreground">OMDb API Key</label>
-              {keysError?.omdb && omdbKey ? (
-                <X className="h-3.5 w-3.5 text-red-400" />
-              ) : keysSavedAt && !keysError?.omdb && omdbKey ? (
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-              ) : null}
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-lg">
+            <div className="text-sm font-semibold">API Keys</div>
+            <DialogDescription className="mt-1">
+              Paste your OMDb and TMDB keys to unlock search and trending. Keys are stored securely in the
+              OS keychain.
+            </DialogDescription>
+            <div className="mt-3 space-y-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs pt-2 text-muted-foreground">OMDb API Key</label>
+                  {keysError?.omdb && omdbKey ? (
+                    <X className="h-3.5 w-3.5 text-red-400" />
+                  ) : keysSavedAt && !keysError?.omdb && omdbKey ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  ) : null}
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showOmdbKey ? "text" : "password"}
+                    value={omdbKey}
+                    onChange={(event) => {
+                      setOmdbKey(event.target.value);
+                      setKeysSavedAt(null);
+                    }}
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    className="pr-14"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOmdbKey((prev) => !prev)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
+                  >
+                    {showOmdbKey ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-muted-foreground">TMDB API Key</label>
+                  {keysError?.tmdb && tmdbKey ? (
+                    <X className="h-3.5 w-3.5 text-red-400" />
+                  ) : keysSavedAt && !keysError?.tmdb && tmdbKey ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  ) : null}
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showTmdbKey ? "text" : "password"}
+                    value={tmdbKey}
+                    onChange={(event) => {
+                      setTmdbKey(event.target.value);
+                      setKeysSavedAt(null);
+                    }}
+                    spellCheck={false}
+                    autoCorrect="off"
+                    autoCapitalize="none"
+                    className="pr-14"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTmdbKey((prev) => !prev)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
+                  >
+                    {showTmdbKey ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="relative">
-              <Input
-                type={showOmdbKey ? "text" : "password"}
-                value={omdbKey}
-                onChange={(event) => {
-                  setOmdbKey(event.target.value);
-                  setKeysSavedAt(null);
-                }}
-                spellCheck={false}
-                autoCorrect="off"
-                autoCapitalize="none"
-                className="pr-14"
-              />
-              <button
-                type="button"
-                onClick={() => setShowOmdbKey((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
-              >
-                {showOmdbKey ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs  text-muted-foreground">TMDB API Key</label>
-              {keysError?.tmdb && tmdbKey ? (
-                <X className="h-3.5 w-3.5 text-red-400" />
-              ) : keysSavedAt && !keysError?.tmdb && tmdbKey ? (
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-              ) : null}
-            </div>
-            <div className="relative">
-              <Input
-                type={showTmdbKey ? "text" : "password"}
-                value={tmdbKey}
-                onChange={(event) => {
-                  setTmdbKey(event.target.value);
-                  setKeysSavedAt(null);
-                }}
-                spellCheck={false}
-                autoCorrect="off"
-                autoCapitalize="none"
-                className="pr-14"
-              />
-              <button
-                type="button"
-                onClick={() => setShowTmdbKey((prev) => !prev)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground transition hover:text-foreground"
-              >
-                {showTmdbKey ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 space-y-3">
-          <div className="text-lg font-semibold">Keyboard Shortcuts</div>
-          <div className="space-y-2">
-            {(
-              [
-                ["globalSearch", "Global Search"],
-                ["refreshDetails", "Refresh Details"],
-                ["openImdb", "Open IMDb"]
+          </section>
+          <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-lg">
+            <div className="text-sm font-semibold">Keyboard Shortcuts</div>
+            <div className="mt-3 space-y-2">
+              {(
+                [
+                  ["globalSearch", "Global Search"],
+                  ["refreshDetails", "Refresh Details"],
+                  ["openImdb", "Open IMDb"]
               ] as Array<[keyof AppShortcuts, string]>
             ).map(([key, label]) => (
               <div
@@ -224,24 +227,25 @@ export function SettingsModal() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setRecordingKey(key)}
-                    className="rounded-lg border border-border/70 bg-background/40 px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
-                  >
-                    {recordingKey === key ? "Recording..." : "Edit"}
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setShortcutDraft((prev) => ({ ...prev, [key]: "" }))}
                     className="rounded-lg border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
                     aria-label={`Clear ${label} shortcut`}
                   >
                     ✕
                   </button>
-                  {renderShortcut(shortcutDraft[key], recordingKey === key)}
+                  <button
+                    type="button"
+                    onClick={() => setRecordingKey(key)}
+                    className="rounded-lg border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+                    aria-label={`Edit ${label} shortcut`}
+                  >
+                    {renderShortcut(shortcutDraft[key], recordingKey === key)}
+                  </button>
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </section>
         </div>
         <DialogFooter className="mt-6">
           <Button variant="ghost" onClick={closeSettings} className="h-8 gap-1 px-5 text-sm">
