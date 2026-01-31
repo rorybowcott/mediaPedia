@@ -52,18 +52,22 @@ export function DetailView() {
     label: React.ReactNode,
     value: string | null,
     ratio: number | null,
+    fillGradient?: string,
   ) => (
-    <div className="rounded-xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-3 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
+    <div className="rounded-xl border border-border/70 bg-[var(--card-tile-bg)] p-3 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
       <div className="flex items-center justify-between text-xs uppercase text-muted-foreground">
         <div className="text-xs uppercase text-muted-foreground">{label}</div>
-        <span className="text-sm font-semibold text-foreground">
+        <span className="text-sm font-semibold text-[var(--rating-value-color)]">
           {value ?? "—"}
         </span>
       </div>
-      <div className="mt-3 h-3.5 rounded-full bg-black/30 shadow-[inset_0_2px_6px_rgba(0,0,0,0.55)]">
+      <div className="mt-3 h-3.5 rounded-full bg-[var(--rating-track-bg)] shadow-[var(--rating-track-shadow)]">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-white/20 via-white/30 to-white/45 shadow-[0_6px_16px_rgba(0,0,0,0.35)]"
-          style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }}
+          className="h-full rounded-full shadow-[var(--rating-fill-shadow)]"
+          style={{
+            width: `${Math.round((ratio ?? 0) * 100)}%`,
+            background: fillGradient ?? "var(--rating-fill-gradient)"
+          }}
           aria-hidden="true"
         />
       </div>
@@ -124,7 +128,7 @@ export function DetailView() {
 
       <div className="grid gap-4 min-[650px]:grid-cols-2">
         <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.16))] shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
             <CardHeader className="space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -213,12 +217,12 @@ export function DetailView() {
         </div>
 
         <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.22))] shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">Key Stats</div>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
+              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Clock3 className="h-4 w-4" /> Runtime
                 </div>
@@ -226,7 +230,7 @@ export function DetailView() {
                   {formatRuntime(detail.runtime)}
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
+              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Calendar className="h-4 w-4" /> Released
                 </div>
@@ -234,7 +238,7 @@ export function DetailView() {
                   {formatYear(detail.year)}
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
+              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Star className="h-4 w-4" /> IMDb Rating
                 </div>
@@ -242,7 +246,7 @@ export function DetailView() {
                   {detail.rating ?? "—"}
                 </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-[rgba(255,255,255,0.03)] p-4 shadow-[0_8px_18px_rgba(0,0,0,0.3)]">
+              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
                 <div className="text-xs uppercase text-muted-foreground">
                   IMDb Votes
                 </div>
@@ -253,7 +257,7 @@ export function DetailView() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.22))] shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">Ratings</div>
             </CardHeader>
@@ -270,6 +274,7 @@ export function DetailView() {
                 </Button>,
                 detail.rating ? `${detail.rating}/10` : null,
                 parseImdbScore(detail.rating),
+                "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
               )}
               {renderRatingSlider(
                 <Button
@@ -286,6 +291,7 @@ export function DetailView() {
                   detail.rottenTomatoesScore ??
                     getOmdbRating("Rotten Tomatoes"),
                 ),
+                "linear-gradient(90deg, rgba(181,59,64,0.9), rgba(128,34,38,0.95))",
               )}
               {renderRatingSlider(
                 <Button
@@ -299,11 +305,12 @@ export function DetailView() {
                 parseMetacriticScore(
                   detail.metacriticScore ?? getOmdbRating("Metacritic"),
                 ),
+                "linear-gradient(90deg, rgba(235,235,235,0.7), rgba(170,170,170,0.95))",
               )}
             </CardContent>
           </Card>
 
-          <Card className="border-border/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.22))] shadow-lg">
+          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">People</div>
             </CardHeader>

@@ -21,6 +21,10 @@ export function SettingsModal() {
   const saveKeys = useAppStore((state) => state.saveKeys);
   const shortcuts = useAppStore((state) => state.shortcuts);
   const setShortcuts = useAppStore((state) => state.setShortcuts);
+  const showTrending = useAppStore((state) => state.showTrending);
+  const setShowTrending = useAppStore((state) => state.setShowTrending);
+  const theme = useAppStore((state) => state.theme);
+  const setTheme = useAppStore((state) => state.setTheme);
 
   const [omdbKey, setOmdbKey] = useState(keys.omdbKey ?? "");
   const [tmdbKey, setTmdbKey] = useState(keys.tmdbKey ?? "");
@@ -209,6 +213,34 @@ export function SettingsModal() {
               </div>
             </div>
           </section>
+          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+            <div>
+              <div className="text-sm font-semibold">Trending panel</div>
+              <div className="text-xs text-muted-foreground">Show trending suggestions on the home view.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTrending(!showTrending)}
+              className="rounded-full border border-border/70 bg-background/50 px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+              aria-pressed={showTrending}
+            >
+              {showTrending ? "On" : "Off"}
+            </button>
+          </div>
+          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+            <div>
+              <div className="text-sm font-semibold">Theme</div>
+              <div className="text-xs text-muted-foreground">Switch between light and dark.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="rounded-full border border-border/70 bg-background/50 px-3 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+              aria-pressed={theme === "dark"}
+            >
+              {theme === "dark" ? "Dark" : "Light"}
+            </button>
+          </div>
           <div>
             <div className="text-sm font-semibold">Keyboard Shortcuts</div>
             <div className="mt-3 space-y-2">

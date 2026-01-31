@@ -55,6 +55,8 @@ interface AppState {
   detail: TitleRecord | null;
   detailLoading: boolean;
   view: "list" | "detail";
+  showTrending: boolean;
+  theme: "light" | "dark";
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
   lastRefresh: number | null;
@@ -74,6 +76,8 @@ interface AppState {
   saveKeys: (keys: AppKeys, options?: { close?: boolean }) => Promise<void>;
   resetKeys: () => Promise<void>;
   setShortcuts: (shortcuts: AppShortcuts) => Promise<void>;
+  setShowTrending: (value: boolean) => Promise<void>;
+  setTheme: (value: "light" | "dark") => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
   fetchRemoteSuggestions: () => Promise<void>;
@@ -113,6 +117,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   detail: null,
   detailLoading: false,
   view: "list",
+  showTrending: true,
+  theme: "dark",
   trending: [],
   localTitles: [],
   lastRefresh: null,
@@ -132,7 +138,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     const localTitles = await listTitles();
     const trending = await listTrendingSeeds();
-    set({ keys, shortcuts, localTitles, trending });
+    const storedShowTrending = await getSetting("show_trending");
+    const showTrending = storedShowTrending ? storedShowTrending === "true" : true;
+    const storedTheme = await getSetting("theme");
+    const theme = storedTheme === "light" ? "light" : "dark";
+    set({ keys, shortcuts, localTitles, trending, showTrending, theme });
     get().rebuildIndex();
 
     const lastRefresh = await getSetting("last_trending_refresh");
@@ -371,6 +381,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   setShortcuts: async (shortcuts) => {
     await setSetting("shortcuts", JSON.stringify(shortcuts));
     set({ shortcuts });
+  },
+  setShowTrending: async (value) => {
+    await setSetting("show_trending", value ? "true" : "false");
+    set({ showTrending: value });
+  },
+  setTheme: async (value) => {
+    await setSetting("theme", value);
+    set({ theme: value });
   },
   refreshTrending: async () => {
     const { keys } = get();

@@ -35,14 +35,16 @@ function App() {
   const refreshTrending = useAppStore((state) => state.refreshTrending);
   const backToList = useAppStore((state) => state.backToList);
   const trending = useAppStore((state) => state.trending);
+  const showTrending = useAppStore((state) => state.showTrending);
+  const theme = useAppStore((state) => state.theme);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const isAdjustingResize = useRef(false);
   const lastBounds = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const previousQuery = useRef(query);
 
   const trendingSuggestions = useMemo(
-    () => buildTrendingSuggestions(trending),
-    [trending]
+    () => (showTrending ? buildTrendingSuggestions(trending) : []),
+    [showTrending, trending]
   );
   const hasQuery = Boolean(query.trim());
   const navigationSuggestions = useMemo(
@@ -295,6 +297,10 @@ function App() {
   }, [query, fetchRemoteSuggestions]);
 
   useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+  }, [theme]);
+
+  useEffect(() => {
     const trimmed = query.trim();
     if (view === "detail" && trimmed && query !== previousQuery.current) {
       backToList();
@@ -323,12 +329,14 @@ function App() {
           />
         ) : (
           <div className="space-y-6 pb-6">
-            <TrendingSection
-              suggestions={trendingSuggestions}
-              selectionIndex={selectionIndex}
-              selectionOffset={0}
-              onSelect={selectSuggestion}
-            />
+            {showTrending ? (
+              <TrendingSection
+                suggestions={trendingSuggestions}
+                selectionIndex={selectionIndex}
+                selectionOffset={0}
+                onSelect={selectSuggestion}
+              />
+            ) : null}
           </div>
         )}
       </ScrollArea>
