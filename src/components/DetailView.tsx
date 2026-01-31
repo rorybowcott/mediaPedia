@@ -26,6 +26,46 @@ export function DetailView() {
   const getOmdbRating = (source: string) =>
     detail?.omdbRatings?.find((rating) => rating.source === source)?.value ??
     null;
+  const parseImdbScore = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = Number.parseFloat(value);
+    if (Number.isNaN(parsed)) return null;
+    return Math.max(0, Math.min(10, parsed)) / 10;
+  };
+  const parsePercentScore = (value?: string | null) => {
+    if (!value) return null;
+    const cleaned = value.replace("%", "").trim();
+    const parsed = Number.parseFloat(cleaned);
+    if (Number.isNaN(parsed)) return null;
+    return Math.max(0, Math.min(100, parsed)) / 100;
+  };
+  const parseMetacriticScore = (value?: string | null) => {
+    if (!value) return null;
+    const parsed = Number.parseFloat(value);
+    if (Number.isNaN(parsed)) return null;
+    return Math.max(0, Math.min(100, parsed)) / 100;
+  };
+  const renderRatingSlider = (
+    label: React.ReactNode,
+    value: string | null,
+    ratio: number | null,
+  ) => (
+    <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[inset_0_1px_6px_rgba(0,0,0,0.35)]">
+      <div className="flex items-center justify-between text-xs uppercase text-muted-foreground">
+        <div className="text-xs uppercase text-muted-foreground">{label}</div>
+        <span className="text-sm font-semibold text-foreground">
+          {value ?? "—"}
+        </span>
+      </div>
+      <div className="mt-3 h-3.5 rounded-full bg-black/30 shadow-[inset_0_2px_6px_rgba(0,0,0,0.55)]">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-white/20 via-white/30 to-white/45 shadow-[0_6px_16px_rgba(0,0,0,0.35)]"
+          style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }}
+          aria-hidden="true"
+        />
+      </div>
+    </div>
+  );
 
   if (detailLoading && !detail) {
     return (
@@ -181,54 +221,48 @@ export function DetailView() {
               <div className="text-sm font-semibold pb-4">Ratings</div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                <div className="mt-1 flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
-                    onClick={() => openLink(imdbUrl(detail.imdbId!))}
-                    title="IMDb (Cmd/Ctrl+O)"
-                    aria-keyshortcuts="Control+O Meta+O"
-                  >
-                    IMDb
-                  </Button>{" "}
-                  <span className="font-semibold">
-                    {detail.rating ? `${detail.rating}/10` : "—"}
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                <div className="mt-1 flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
-                    onClick={() => openLink(rottenTomatoesUrl(detail.title))}
-                  >
-                    Rotten Tomatoes
-                  </Button>{" "}
-                  <span className="font-semibold">
-                    {detail.rottenTomatoesScore ??
-                      getOmdbRating("Rotten Tomatoes") ??
-                      "—"}
-                  </span>
-                </div>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-background/40 p-3">
-                <div className="mt-1 flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
-                    onClick={() => openLink(metacriticUrl(detail.title))}
-                  >
-                    Metacritic
-                  </Button>{" "}
-                  <span className="font-semibold">
-                    {detail.metacriticScore ??
-                      getOmdbRating("Metacritic") ??
-                      "—"}
-                  </span>
-                </div>
-              </div>
+              {renderRatingSlider(
+                <Button
+                  variant="outline"
+                  className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
+                  onClick={() => openLink(imdbUrl(detail.imdbId!))}
+                  title="IMDb (Cmd/Ctrl+O)"
+                  aria-keyshortcuts="Control+O Meta+O"
+                >
+                  IMDb
+                </Button>,
+                detail.rating ? `${detail.rating}/10` : null,
+                parseImdbScore(detail.rating),
+              )}
+              {renderRatingSlider(
+                <Button
+                  variant="outline"
+                  className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
+                  onClick={() => openLink(rottenTomatoesUrl(detail.title))}
+                >
+                  Rotten Tomatoes
+                </Button>,
+                detail.rottenTomatoesScore ??
+                  getOmdbRating("Rotten Tomatoes") ??
+                  null,
+                parsePercentScore(
+                  detail.rottenTomatoesScore ??
+                    getOmdbRating("Rotten Tomatoes"),
+                ),
+              )}
+              {renderRatingSlider(
+                <Button
+                  variant="outline"
+                  className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
+                  onClick={() => openLink(metacriticUrl(detail.title))}
+                >
+                  Metacritic
+                </Button>,
+                detail.metacriticScore ?? getOmdbRating("Metacritic") ?? null,
+                parseMetacriticScore(
+                  detail.metacriticScore ?? getOmdbRating("Metacritic"),
+                ),
+              )}
             </CardContent>
           </Card>
 

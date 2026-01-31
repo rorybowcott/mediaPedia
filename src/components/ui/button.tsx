@@ -18,6 +18,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(base, variants[variant], className)}
+        data-tauri-drag-region="false"
         {...props}
       />
     );

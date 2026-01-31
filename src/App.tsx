@@ -303,7 +303,10 @@ function App() {
   }, [query, view, backToList]);
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden rounded-[20px] bg-background text-foreground">
+    <div
+      className="flex h-screen w-screen flex-col overflow-hidden rounded-[20px] bg-background text-foreground"
+      data-tauri-drag-region
+    >
       <Header />
       <SearchInput />
       {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
