@@ -86,6 +86,8 @@ export function DetailView() {
   const watchProviders = detail?.watchProviders ?? null;
   const hasWatchProviders = Boolean(
     watchProviders?.flatrate?.length ||
+      watchProviders?.free?.length ||
+      watchProviders?.ads?.length ||
       watchProviders?.rent?.length ||
       watchProviders?.buy?.length
   );
@@ -699,6 +701,8 @@ export function DetailView() {
             ) : (
               <>
                 {renderProviderGroup("Stream", watchProviders?.flatrate, watchProviders?.link)}
+                {renderProviderGroup("Free", watchProviders?.free, watchProviders?.link)}
+                {renderProviderGroup("Ad-supported", watchProviders?.ads, watchProviders?.link)}
                 {renderProviderGroup("Rent", watchProviders?.rent, watchProviders?.link)}
                 {renderProviderGroup("Buy", watchProviders?.buy, watchProviders?.link)}
               </>

@@ -91,6 +91,8 @@ const tmdbWatchProvidersSchema = z.object({
     z.object({
       link: z.string().optional(),
       flatrate: z.array(tmdbWatchProviderSchema).optional(),
+      free: z.array(tmdbWatchProviderSchema).optional(),
+      ads: z.array(tmdbWatchProviderSchema).optional(),
       rent: z.array(tmdbWatchProviderSchema).optional(),
       buy: z.array(tmdbWatchProviderSchema).optional()
     })
@@ -310,6 +312,8 @@ export async function fetchTmdbWatchProviders(
     country: regionKey,
     link: region.link ?? null,
     flatrate: mapProviders(region.flatrate),
+    free: mapProviders(region.free),
+    ads: mapProviders(region.ads),
     rent: mapProviders(region.rent),
     buy: mapProviders(region.buy)
   };

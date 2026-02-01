@@ -11,6 +11,8 @@ export interface WatchProviders {
   country: string;
   link?: string | null;
   flatrate?: WatchProvider[] | null;
+  free?: WatchProvider[] | null;
+  ads?: WatchProvider[] | null;
   rent?: WatchProvider[] | null;
   buy?: WatchProvider[] | null;
 }

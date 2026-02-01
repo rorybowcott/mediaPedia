@@ -310,6 +310,21 @@ function App() {
   }, [query, fetchRemoteSuggestions]);
 
   useEffect(() => {
+    const unlistenPromise = appWindow.onFocusChanged(async ({ payload }) => {
+      if (payload) return;
+      try {
+        await appWindow.hide();
+      } catch {
+        // best-effort hide
+      }
+    });
+
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
