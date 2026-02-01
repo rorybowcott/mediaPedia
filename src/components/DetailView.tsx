@@ -23,9 +23,22 @@ export function DetailView() {
   const detail = useAppStore((state) => state.detail);
   const detailLoading = useAppStore((state) => state.detailLoading);
   const posterRef = useRef<HTMLDivElement>(null);
+  const posterOverlayRef = useRef<HTMLImageElement>(null);
   const [posterTilt, setPosterTilt] = useState({ x: 0, y: 0, glow: 0 });
   const [plotExpanded, setPlotExpanded] = useState(false);
   const [posterOpen, setPosterOpen] = useState(false);
+  const [posterClosing, setPosterClosing] = useState(false);
+  const [posterRect, setPosterRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    targetX: number;
+    targetY: number;
+    scale: number;
+  } | null>(null);
+  const [posterAnimating, setPosterAnimating] = useState(false);
+  const [posterHidden, setPosterHidden] = useState(false);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -126,17 +139,66 @@ export function DetailView() {
     await open(url);
     await appWindow.hide();
   };
-  const handlePosterMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    const rect = posterRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = (event.clientX - rect.left) / rect.width - 0.5;
-    const y = (event.clientY - rect.top) / rect.height - 0.5;
+  const updatePosterTilt = (rect: DOMRect, clientX: number, clientY: number) => {
+    const x = (clientX - rect.left) / rect.width - 0.5;
+    const y = (clientY - rect.top) / rect.height - 0.5;
     const tiltX = Math.max(-10, Math.min(10, -y * 16));
     const tiltY = Math.max(-12, Math.min(12, x * 18));
     const glow = Math.min(0.45, Math.hypot(x, y) * 0.8);
     setPosterTilt({ x: tiltX, y: tiltY, glow });
   };
+  const handlePosterMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (posterOpen) return;
+    const rect = posterRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    updatePosterTilt(rect, event.clientX, event.clientY);
+  };
   const handlePosterLeave = () => setPosterTilt({ x: 0, y: 0, glow: 0 });
+  const openPoster = () => {
+    const rect = posterRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const maxW = viewportW * 0.85;
+    const maxH = viewportH * 0.85;
+    const aspect = rect.width / rect.height;
+    let targetW = maxW;
+    let targetH = targetW / aspect;
+    if (targetH > maxH) {
+      targetH = maxH;
+      targetW = targetH * aspect;
+    }
+    const targetX = Math.round((viewportW - targetW) / 2);
+    const targetY = Math.round((viewportH - targetH) / 2);
+    const scale = targetW / rect.width;
+    setPosterRect({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      targetX,
+      targetY,
+      scale
+    });
+    setPosterClosing(false);
+    setPosterOpen(true);
+    setPosterAnimating(false);
+    setPosterHidden(true);
+    setPosterTilt({ x: 0, y: 0, glow: 0 });
+    requestAnimationFrame(() => {
+      setPosterAnimating(true);
+    });
+  };
+  const closePoster = () => {
+    setPosterClosing(true);
+    setPosterAnimating(false);
+    window.setTimeout(() => {
+      setPosterOpen(false);
+      setPosterClosing(false);
+      setPosterRect(null);
+      setPosterHidden(false);
+    }, 180);
+  };
 
   return (
     <div className="px-5">
@@ -194,15 +256,19 @@ export function DetailView() {
                   ref={posterRef}
                   onMouseMove={handlePosterMove}
                   onMouseLeave={handlePosterLeave}
-                  className="block mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out"
+                  className={cn(
+                    "block mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out",
+                    posterHidden ? "opacity-0" : "opacity-100"
+                  )}
                   style={{
                     transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
                     transformStyle: "preserve-3d",
                     boxShadow: `0 0px 30px rgba(0,0,0,0.1), 0 0 30px rgba(200,200,200,${posterTilt.glow})`,
                   }}
-                  onClick={() => setPosterOpen(true)}
+                  onClick={openPoster}
                   type="button"
                   aria-label="Open poster"
+                  disabled={posterOpen}
                 >
                   <div
                     className="relative h-full w-full overflow-hidden rounded-2xl"
@@ -401,25 +467,41 @@ export function DetailView() {
       </div>
       {posterOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
-          onClick={() => setPosterOpen(false)}
+          className={cn(
+            "fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 transition-opacity duration-200 ease-out",
+            posterClosing ? "opacity-0" : "opacity-100"
+          )}
+          onClick={closePoster}
           role="dialog"
           aria-modal="true"
         >
           <button
             type="button"
             className="absolute right-6 top-6 rounded-full border border-white/30 bg-black/40 p-2 text-white/80 transition hover:text-white"
-            onClick={() => setPosterOpen(false)}
+            onClick={closePoster}
             aria-label="Close poster"
           >
             ×
           </button>
-          <img
-            src={detail.posterUrl ?? ""}
-            alt={detail.title}
-            className="max-h-[85vh] max-w-[85vw] rounded-2xl shadow-[0_40px_80px_rgba(0,0,0,0.6)]"
-            onClick={(event) => event.stopPropagation()}
-          />
+          {posterRect ? (
+            <img
+              ref={posterOverlayRef}
+              src={detail.posterUrl ?? ""}
+              alt={detail.title}
+              className="fixed rounded-2xl shadow-[0_40px_80px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-out"
+              onClick={(event) => event.stopPropagation()}
+              style={{
+                width: `${posterRect.width}px`,
+                height: `${posterRect.height}px`,
+                left: `${posterRect.left}px`,
+                top: `${posterRect.top}px`,
+                transformOrigin: "top left",
+                transform: posterAnimating
+                  ? `translate(${posterRect.targetX - posterRect.left}px, ${posterRect.targetY - posterRect.top}px) scale(${posterRect.scale}) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`
+                  : "translate(0, 0) scale(1)"
+              }}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
