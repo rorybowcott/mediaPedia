@@ -57,6 +57,7 @@ interface AppState {
   view: "list" | "detail";
   showTrending: boolean;
   theme: "light" | "dark";
+  detailCardOrder: string[];
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
   lastRefresh: number | null;
@@ -78,6 +79,7 @@ interface AppState {
   setShortcuts: (shortcuts: AppShortcuts) => Promise<void>;
   setShowTrending: (value: boolean) => Promise<void>;
   setTheme: (value: "light" | "dark") => Promise<void>;
+  setDetailCardOrder: (value: string[]) => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
   fetchRemoteSuggestions: () => Promise<void>;
@@ -90,6 +92,7 @@ const DEFAULT_SHORTCUTS: AppShortcuts = {
   refreshDetails: "CommandOrControl+R",
   openImdb: "CommandOrControl+O"
 };
+const DEFAULT_DETAIL_CARD_ORDER = ["poster", "plot", "ratings", "people"];
 const appWindow = getCurrentWindow();
 
 function preferValue<T>(next: T | null | undefined, prev: T | null | undefined) {
@@ -119,6 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   view: "list",
   showTrending: true,
   theme: "dark",
+  detailCardOrder: DEFAULT_DETAIL_CARD_ORDER,
   trending: [],
   localTitles: [],
   lastRefresh: null,
@@ -142,7 +146,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const showTrending = storedShowTrending ? storedShowTrending === "true" : true;
     const storedTheme = await getSetting("theme");
     const theme = storedTheme === "light" ? "light" : "dark";
-    set({ keys, shortcuts, localTitles, trending, showTrending, theme });
+    const storedCardOrder = await getSetting("detail_card_order");
+    let detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
+    if (storedCardOrder) {
+      try {
+        const parsed = JSON.parse(storedCardOrder) as string[];
+        const hasAll = DEFAULT_DETAIL_CARD_ORDER.every((id) => parsed.includes(id));
+        if (Array.isArray(parsed) && hasAll) {
+          detailCardOrder = parsed.filter((id) => DEFAULT_DETAIL_CARD_ORDER.includes(id));
+        }
+      } catch {
+        detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
+      }
+    }
+    set({ keys, shortcuts, localTitles, trending, showTrending, theme, detailCardOrder });
     get().rebuildIndex();
 
     const lastRefresh = await getSetting("last_trending_refresh");
@@ -389,6 +406,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTheme: async (value) => {
     await setSetting("theme", value);
     set({ theme: value });
+  },
+  setDetailCardOrder: async (value) => {
+    await setSetting("detail_card_order", JSON.stringify(value));
+    set({ detailCardOrder: value });
   },
   refreshTrending: async () => {
     const { keys } = get();

@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { ExternalLink, Calendar, Clock3, Film } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ExternalLink, Calendar, Clock3, Film, GripHorizontal } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -22,8 +22,15 @@ const appWindow = getCurrentWindow();
 export function DetailView() {
   const detail = useAppStore((state) => state.detail);
   const detailLoading = useAppStore((state) => state.detailLoading);
+  const detailCardOrder = useAppStore((state) => state.detailCardOrder);
+  const setDetailCardOrder = useAppStore((state) => state.setDetailCardOrder);
   const posterRef = useRef<HTMLDivElement>(null);
   const posterOverlayRef = useRef<HTMLImageElement>(null);
+  const dragOrderRef = useRef<string[] | null>(null);
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  const cardsContainerRef = useRef<HTMLDivElement>(null);
+  const leftColumnRef = useRef<HTMLDivElement>(null);
+  const rightColumnRef = useRef<HTMLDivElement>(null);
   const [posterTilt, setPosterTilt] = useState({ x: 0, y: 0, glow: 0 });
   const [plotExpanded, setPlotExpanded] = useState(false);
   const [posterOpen, setPosterOpen] = useState(false);
@@ -39,6 +46,14 @@ export function DetailView() {
   } | null>(null);
   const [posterAnimating, setPosterAnimating] = useState(false);
   const [posterHidden, setPosterHidden] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<{ id: string; position: "before" | "after" } | null>(
+    null,
+  );
+  const [dragOrder, setDragOrder] = useState<string[] | null>(null);
+  const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
+  const [dragSize, setDragSize] = useState<{ width: number; height: number } | null>(null);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -200,256 +215,429 @@ export function DetailView() {
     }, 180);
   };
 
+  const handleDragStart = (event: React.PointerEvent, id: string) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const card = cardRefs.current.get(id);
+    if (card) {
+      const rect = card.getBoundingClientRect();
+      setDragOffset({ x: event.clientX - rect.left, y: event.clientY - rect.top });
+      setDragSize({ width: rect.width, height: rect.height });
+      setDragPosition({ x: rect.left, y: rect.top });
+    } else {
+      setDragOffset({ x: 0, y: 0 });
+      setDragSize(null);
+      setDragPosition({ x: event.clientX, y: event.clientY });
+    }
+    setDraggingId(id);
+    setDragOver(null);
+    setDragOrder(detailCardOrder);
+    dragOrderRef.current = detailCardOrder;
+  };
+
+  useEffect(() => {
+    if (!draggingId) return;
+
+    const handleMove = (event: PointerEvent) => {
+      if (dragOffset) {
+        setDragPosition({
+          x: event.clientX - dragOffset.x,
+          y: event.clientY - dragOffset.y,
+        });
+      }
+      const element = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
+      const cardEl = element?.closest?.("[data-card-id]") as HTMLElement | null;
+      if (!cardEl) {
+        const container = cardsContainerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const inside =
+            event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom;
+          if (inside) {
+            const base = dragOrderRef.current ?? detailCardOrder;
+            const next = base.filter((cardId) => cardId !== draggingId);
+            if (next.length) {
+              const mid = rect.left + rect.width / 2;
+              const column = event.clientX <= mid ? "left" : "right";
+              const leftCards = next.filter((_, index) => index % 2 === 0);
+              const rightCards = next.filter((_, index) => index % 2 === 1);
+              const targetList = column === "left" ? leftCards : rightCards;
+              const lastId = targetList[targetList.length - 1] ?? next[next.length - 1];
+              setDragOver({ id: lastId, position: "after" });
+              next.splice(next.length, 0, draggingId);
+              dragOrderRef.current = next;
+              setDragOrder(next);
+              return;
+            }
+          }
+        }
+        setDragOver(null);
+        return;
+      }
+      const overId = cardEl.dataset.cardId;
+      if (!overId || overId === draggingId) {
+        setDragOver(null);
+        return;
+      }
+      const rect = cardEl.getBoundingClientRect();
+      const isAfter = event.clientY - rect.top > rect.height / 2;
+      setDragOver({ id: overId, position: isAfter ? "after" : "before" });
+      setDragOrder((current) => {
+        const base = current ?? detailCardOrder;
+        const next = base.filter((cardId) => cardId !== draggingId);
+        const targetIndex = next.indexOf(overId);
+        const insertIndex = isAfter ? targetIndex + 1 : targetIndex;
+        next.splice(insertIndex, 0, draggingId);
+        dragOrderRef.current = next;
+        return next;
+      });
+    };
+
+    const handleUp = () => {
+      if (dragOrderRef.current) {
+        setDetailCardOrder(dragOrderRef.current);
+      }
+      setDraggingId(null);
+      setDragOver(null);
+      setDragOrder(null);
+      dragOrderRef.current = null;
+      setDragPosition(null);
+      setDragOffset(null);
+      setDragSize(null);
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp, { once: true });
+
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+    };
+  }, [detailCardOrder, draggingId, dragOffset, setDetailCardOrder]);
+
+  const cardHandle = (id: string) => (
+    <button
+      type="button"
+      data-drag-handle="true"
+      onPointerDown={(event) => handleDragStart(event, id)}
+      className="group absolute left-1/2 top-2 -translate-x-1/2 cursor-grab rounded-full border border-transparent bg-transparent p-0.5 text-muted-foreground/50 transition hover:text-muted-foreground active:cursor-grabbing"
+      aria-label="Reorder card"
+    >
+      <GripHorizontal className="h-3.5 w-3.5 opacity-60 transition group-hover:opacity-90" />
+    </button>
+  );
+
+  const cardsById: Record<string, React.ReactNode> = {
+    poster: (
+      <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
+        <CardHeader className="relative">
+          {cardHandle("poster")}
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-semibold">{detail.title}</h2>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <Badge
+                  variant="secondary"
+                  className="inline-flex items-center gap-2 rounded-full px-3"
+                >
+                  <Film className="h-3.5 w-3.5" />
+                  {detail.type}
+                </Badge>
+                {detail.year ? (
+                  <Badge
+                    variant="secondary"
+                    className="inline-flex items-center gap-2 rounded-full px-3"
+                  >
+                    <Calendar className="h-3.5 w-3.5" />
+                    {formatYear(detail.year)}
+                  </Badge>
+                ) : null}
+                {detail.runtime ? (
+                  <Badge
+                    variant="secondary"
+                    className="inline-flex items-center gap-2 rounded-full px-3"
+                  >
+                    <Clock3 className="h-3.5 w-3.5" />
+                    {formatRuntime(detail.runtime)}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              className="border-transparent gap-2 p-0.5 pl-2 pr-2"
+              onClick={() => openLink(trailerUrl(detail.title, detail.year))}
+            >
+              Trailers <ExternalLink className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-5">
+          <div className="flex justify-center mb-4 pb-3">
+            <button
+              ref={posterRef}
+              onMouseMove={handlePosterMove}
+              onMouseLeave={handlePosterLeave}
+              className={cn(
+                "block mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out",
+                posterHidden ? "opacity-0" : "opacity-100",
+              )}
+              style={{
+                transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
+                transformStyle: "preserve-3d",
+                boxShadow: `0 0px 30px rgba(0,0,0,0.1), 0 0 30px rgba(200,200,200,${posterTilt.glow})`,
+              }}
+              onClick={openPoster}
+              type="button"
+              aria-label="Open poster"
+              disabled={posterOpen}
+            >
+              <div
+                className="relative h-full w-full overflow-hidden rounded-2xl"
+                style={{
+                  transform: "scale(1)",
+                  transformStyle: "preserve-3d",
+                }}
+              >
+                {detail.posterUrl ? (
+                  <img
+                    src={detail.posterUrl}
+                    alt={detail.title}
+                    className="h-full w-full object-cover"
+                    style={{ backfaceVisibility: "hidden" }}
+                  />
+                ) : null}
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-2xl"
+                  style={{
+                    boxShadow:
+                      "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 35px rgba(0,0,0,0.35)",
+                  }}
+                  aria-hidden="true"
+                />
+              </div>
+            </button>
+          </div>
+          <Separator className="my-4" />
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground">Genres</p>
+            <div className="flex flex-wrap gap-2">
+              {(detail.genres ?? []).length
+                ? detail.genres?.map((genre) => (
+                    <Badge
+                      key={genre}
+                      variant="secondary"
+                      className="rounded-full px-3 py-1"
+                    >
+                      {genre}
+                    </Badge>
+                  ))
+                : "—"}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+    plot: (
+      <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
+        <CardHeader className="relative space-y-1">
+          {cardHandle("plot")}
+          <div className="text-sm font-semibold pb-4">Plot</div>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p
+            className="text-sm leading-relaxed text-foreground/90"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: plotExpanded ? "unset" : 4,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {detail.plot ?? "Plot unavailable."}
+          </p>
+          {detail.plot && detail.plot.length > 180 ? (
+            <button
+              type="button"
+              onClick={() => setPlotExpanded((prev) => !prev)}
+              className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+            >
+              {plotExpanded ? "Show less" : "Show more"}
+            </button>
+          ) : null}
+        </CardContent>
+      </Card>
+    ),
+    ratings: (
+      <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
+        <CardHeader className="relative space-y-1">
+          {cardHandle("ratings")}
+          <div className="text-sm font-semibold pb-4">Ratings</div>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {renderRatingSlider(
+            <Button
+              variant="outline"
+              className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
+              onClick={() => openLink(imdbUrl(detail.imdbId!))}
+              title="IMDb (Cmd/Ctrl+O)"
+              aria-keyshortcuts="Control+O Meta+O"
+            >
+              IMDb
+            </Button>,
+            detail.rating ? `${detail.rating}/10` : null,
+            parseImdbScore(detail.rating),
+            "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
+            detail.votes ? `${formatVotes(detail.votes)} votes` : "No votes",
+          )}
+          {renderRatingSlider(
+            <Button
+              variant="outline"
+              className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
+              onClick={() => openLink(rottenTomatoesUrl(detail.title))}
+            >
+              Rotten Tomatoes
+            </Button>,
+            detail.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes") ?? null,
+            parsePercentScore(
+              detail.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes"),
+            ),
+            "linear-gradient(90deg, rgba(181,59,64,0.9), rgba(128,34,38,0.95))",
+            undefined,
+            "No info",
+          )}
+          {renderRatingSlider(
+            <Button
+              variant="outline"
+              className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
+              onClick={() => openLink(metacriticUrl(detail.title))}
+            >
+              Metacritic
+            </Button>,
+            detail.metacriticScore ?? getOmdbRating("Metacritic") ?? null,
+            parseMetacriticScore(detail.metacriticScore ?? getOmdbRating("Metacritic")),
+            "linear-gradient(90deg, rgba(235,235,235,0.7), rgba(170,170,170,0.95))",
+            undefined,
+            "No info",
+          )}
+        </CardContent>
+      </Card>
+    ),
+    people: (
+      <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
+        <CardHeader className="relative space-y-1">
+          {cardHandle("people")}
+          <div className="text-sm font-semibold pb-4">People</div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div>
+            <p className="text-muted-foreground">Director</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {detail.director ? (
+                <Badge variant="secondary" className="rounded-full px-3 py-1">
+                  {detail.director}
+                </Badge>
+              ) : (
+                "—"
+              )}
+            </div>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Cast</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {detail.cast
+                ? detail.cast
+                    .split(",")
+                    .slice(0, 6)
+                    .map((name) => (
+                      <Badge
+                        key={name.trim()}
+                        variant="secondary"
+                        className="rounded-full px-3 py-1"
+                      >
+                        {name.trim()}
+                      </Badge>
+                    ))
+                : "—"}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ),
+  };
+
+  const fallbackOrder = ["poster", "plot", "ratings", "people"];
+  const activeOrder = dragOrder ?? detailCardOrder;
+  const orderedCards = (activeOrder.length ? activeOrder : fallbackOrder)
+    .map((id) => ({ id, node: cardsById[id] }))
+    .filter((card) => card.node);
+  const leftCards = orderedCards.filter((_, index) => index % 2 === 0);
+  const rightCards = orderedCards.filter((_, index) => index % 2 === 1);
+
   return (
     <div className="px-5">
       <div className="mb-4" />
 
-      <div className="grid gap-4 min-[650px]:grid-cols-2">
-        <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
-            <CardHeader className="space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-semibold">{detail.title}</h2>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                    <Badge
-                      variant="secondary"
-                      className="inline-flex items-center gap-2 rounded-full px-3"
-                    >
-                      <Film className="h-3.5 w-3.5" />
-                      {detail.type}
-                    </Badge>
-                    {detail.year ? (
-                      <Badge
-                        variant="secondary"
-                        className="inline-flex items-center gap-2 rounded-full px-3"
-                      >
-                        <Calendar className="h-3.5 w-3.5" />
-                        {formatYear(detail.year)}
-                      </Badge>
-                    ) : null}
-                    {detail.runtime ? (
-                      <Badge
-                        variant="secondary"
-                        className="inline-flex items-center gap-2 rounded-full px-3"
-                      >
-                        <Clock3 className="h-3.5 w-3.5" />
-                        {formatRuntime(detail.runtime)}
-                      </Badge>
-                    ) : null}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  className="border-transparent gap-2 p-0.5 pl-2 pr-2"
-                  onClick={() =>
-                    openLink(trailerUrl(detail.title, detail.year))
-                  }
-                >
-                  Trailers <ExternalLink className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-5">
-              <div className="flex justify-center mb-4 pb-3">
-                <button
-                  ref={posterRef}
-                  onMouseMove={handlePosterMove}
-                  onMouseLeave={handlePosterLeave}
+      <div className="space-y-6">
+        <div
+          ref={cardsContainerRef}
+          className="flex flex-col gap-4 min-[650px]:flex-row min-[650px]:items-start"
+        >
+          <div ref={leftColumnRef} className="flex w-full flex-col gap-4 min-[650px]:w-1/2">
+            {leftCards.map((card) => {
+              const isDragOver = dragOver?.id === card.id;
+              return (
+                <div
+                  key={card.id}
                   className={cn(
-                    "block mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out",
-                    posterHidden ? "opacity-0" : "opacity-100"
+                    "transition-[transform,opacity] duration-200 ease-out",
+                    isDragOver ? "ring-2 ring-accent/60 ring-offset-2 ring-offset-background" : "",
+                    draggingId === card.id ? "opacity-0" : ""
                   )}
-                  style={{
-                    transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
-                    transformStyle: "preserve-3d",
-                    boxShadow: `0 0px 30px rgba(0,0,0,0.1), 0 0 30px rgba(200,200,200,${posterTilt.glow})`,
+                  data-card-id={card.id}
+                  ref={(node) => {
+                    if (node) {
+                      cardRefs.current.set(card.id, node);
+                    } else {
+                      cardRefs.current.delete(card.id);
+                    }
                   }}
-                  onClick={openPoster}
-                  type="button"
-                  aria-label="Open poster"
-                  disabled={posterOpen}
                 >
-                  <div
-                    className="relative h-full w-full overflow-hidden rounded-2xl"
-                    style={{
-                      transform: "scale(1)",
-                      transformStyle: "preserve-3d",
-                    }}
-                  >
-                    {detail.posterUrl ? (
-                      <img
-                        src={detail.posterUrl}
-                        alt={detail.title}
-                        className="h-full w-full object-cover"
-                        style={{ backfaceVisibility: "hidden" }}
-                      />
-                    ) : null}
-                    <div
-                      className="pointer-events-none absolute inset-0 rounded-2xl"
-                      style={{
-                        boxShadow:
-                          "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 35px rgba(0,0,0,0.35)",
-                      }}
-                      aria-hidden="true"
-                    />
-                  </div>
-                </button>
-              </div>
-              <Separator className="my-4" />
-              <div className="space-y-2 text-sm">
-                <p className="text-muted-foreground">Genres</p>
-                <div className="flex flex-wrap gap-2">
-                  {(detail.genres ?? []).length
-                    ? detail.genres?.map((genre) => (
-                        <Badge
-                          key={genre}
-                          variant="secondary"
-                          className="rounded-full px-3 py-1"
-                        >
-                          {genre}
-                        </Badge>
-                      ))
-                    : "—"}
+                  {card.node}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
-            <CardHeader>
-              <div className="text-sm font-semibold pb-4">Plot</div>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p
-                className="text-sm leading-relaxed text-foreground/90"
-                style={{
-                  display: "-webkit-box",
-                  WebkitLineClamp: plotExpanded ? "unset" : 4,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                }}
-              >
-                {detail.plot ?? "Plot unavailable."}
-              </p>
-              {detail.plot && detail.plot.length > 180 ? (
-                <button
-                  type="button"
-                  onClick={() => setPlotExpanded((prev) => !prev)}
-                  className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
-                >
-                  {plotExpanded ? "Show less" : "Show more"}
-                </button>
-              ) : null}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
-            <CardHeader>
-              <div className="text-sm font-semibold pb-4">Ratings</div>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {renderRatingSlider(
-                <Button
-                  variant="outline"
-                  className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
-                  onClick={() => openLink(imdbUrl(detail.imdbId!))}
-                  title="IMDb (Cmd/Ctrl+O)"
-                  aria-keyshortcuts="Control+O Meta+O"
-                >
-                  IMDb
-                </Button>,
-                detail.rating ? `${detail.rating}/10` : null,
-                parseImdbScore(detail.rating),
-                "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
-                detail.votes
-                  ? `${formatVotes(detail.votes)} votes`
-                  : "No votes",
-              )}
-              {renderRatingSlider(
-                <Button
-                  variant="outline"
-                  className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
-                  onClick={() => openLink(rottenTomatoesUrl(detail.title))}
-                >
-                  Rotten Tomatoes
-                </Button>,
-                detail.rottenTomatoesScore ??
-                  getOmdbRating("Rotten Tomatoes") ??
-                  null,
-                parsePercentScore(
-                  detail.rottenTomatoesScore ??
-                    getOmdbRating("Rotten Tomatoes"),
-                ),
-                "linear-gradient(90deg, rgba(181,59,64,0.9), rgba(128,34,38,0.95))",
-                undefined,
-                "No info",
-              )}
-              {renderRatingSlider(
-                <Button
-                  variant="outline"
-                  className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
-                  onClick={() => openLink(metacriticUrl(detail.title))}
-                >
-                  Metacritic
-                </Button>,
-                detail.metacriticScore ?? getOmdbRating("Metacritic") ?? null,
-                parseMetacriticScore(
-                  detail.metacriticScore ?? getOmdbRating("Metacritic"),
-                ),
-                "linear-gradient(90deg, rgba(235,235,235,0.7), rgba(170,170,170,0.95))",
-                undefined,
-                "No info",
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
-            <CardHeader>
-              <div className="text-sm font-semibold pb-4">People</div>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Director</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {detail.director ? (
-                    <Badge
-                      variant="secondary"
-                      className="rounded-full px-3 py-1"
-                    >
-                      {detail.director}
-                    </Badge>
-                  ) : (
-                    "—"
+              );
+            })}
+          </div>
+          <div ref={rightColumnRef} className="flex w-full flex-col gap-4 min-[650px]:w-1/2">
+            {rightCards.map((card) => {
+              const isDragOver = dragOver?.id === card.id;
+              return (
+                <div
+                  key={card.id}
+                  className={cn(
+                    "transition-[transform,opacity] duration-200 ease-out",
+                    isDragOver ? "ring-2 ring-accent/60 ring-offset-2 ring-offset-background" : "",
+                    draggingId === card.id ? "opacity-0" : ""
                   )}
+                  data-card-id={card.id}
+                  ref={(node) => {
+                    if (node) {
+                      cardRefs.current.set(card.id, node);
+                    } else {
+                      cardRefs.current.delete(card.id);
+                    }
+                  }}
+                >
+                  {card.node}
                 </div>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Cast</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {detail.cast
-                    ? detail.cast
-                        .split(",")
-                        .slice(0, 6)
-                        .map((name) => (
-                          <Badge
-                            key={name.trim()}
-                            variant="secondary"
-                            className="rounded-full px-3 py-1"
-                          >
-                            {name.trim()}
-                          </Badge>
-                        ))
-                    : "—"}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="min-[650px]:col-span-2 space-y-5 pt-8 pb-6">
+        <div className="space-y-5 pt-2 pb-6">
           <div className="mx-auto w-full max-w-xl space-y-5">
             <Separator />
             <div className="space-y-3 text-sm">
@@ -465,6 +653,22 @@ export function DetailView() {
           </div>
         </div>
       </div>
+      {draggingId && dragPosition ? (
+        <div
+          className="pointer-events-none fixed z-50"
+          style={{
+            left: dragPosition.x,
+            top: dragPosition.y,
+            width: dragSize?.width,
+            height: dragSize?.height,
+          }}
+          aria-hidden="true"
+        >
+          <div className="scale-[1.02] opacity-95 shadow-[0_30px_60px_rgba(0,0,0,0.35)]">
+            {cardsById[draggingId]}
+          </div>
+        </div>
+      ) : null}
       {posterOpen ? (
         <div
           className={cn(
@@ -497,7 +701,7 @@ export function DetailView() {
                 top: `${posterRect.top}px`,
                 transformOrigin: "top left",
                 transform: posterAnimating
-                  ? `translate(${posterRect.targetX - posterRect.left}px, ${posterRect.targetY - posterRect.top}px) scale(${posterRect.scale}) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`
+                  ? `translate(${posterRect.targetX - posterRect.left}px, ${posterRect.targetY - posterRect.top}px) scale(${posterRect.scale})`
                   : "translate(0, 0) scale(1)"
               }}
             />
