@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getCurrentWindow, LogicalPosition } from "@tauri-apps/api/window";
+import { cursorPosition, getCurrentWindow, LogicalPosition, monitorFromPoint } from "@tauri-apps/api/window";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useAppStore } from "./store/useAppStore";
 import { SearchInput } from "./components/SearchInput";
@@ -85,6 +85,18 @@ function App() {
 
   useEffect(() => {
     const handler = async () => {
+      try {
+        const cursor = await cursorPosition();
+        const monitor = await monitorFromPoint(cursor.x, cursor.y);
+        const size = await appWindow.outerSize();
+        if (monitor && size) {
+          const centerX = Math.round((monitor.position.x + monitor.size.width / 2) - size.width / 2);
+          const centerY = Math.round((monitor.position.y + monitor.size.height / 2) - size.height / 2);
+          await appWindow.setPosition(new LogicalPosition(centerX, centerY));
+        }
+      } catch {
+        // best-effort positioning
+      }
       await appWindow.show();
       await appWindow.setFocus();
       window.dispatchEvent(new Event("focus-search"));

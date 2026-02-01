@@ -45,7 +45,8 @@ export function SuggestionsList({
           id={`${listId}-item-${index}`}
           className={cn(
             "flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-left transition",
-            selectionIndex === selectionOffset + index && "border-accent bg-accent/10"
+            selectionIndex === selectionOffset + index &&
+              "border-accent bg-accent text-accent-foreground ring-1 ring-accent"
           )}
         >
           <div className="h-14 w-10 overflow-hidden rounded-md bg-muted">

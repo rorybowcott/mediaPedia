@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
-import { ExternalLink, Calendar, Clock3, Star } from "lucide-react";
+import { ExternalLink, Calendar, Clock3, Film, Star } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Skeleton } from "./ui/skeleton";
-import { formatRuntime, formatYear } from "../lib/utils";
+import { cn, formatRuntime, formatYear } from "../lib/utils";
 import {
   imdbUrl,
   metacriticUrl,
@@ -24,6 +24,7 @@ export function DetailView() {
   const detailLoading = useAppStore((state) => state.detailLoading);
   const posterRef = useRef<HTMLDivElement>(null);
   const [posterTilt, setPosterTilt] = useState({ x: 0, y: 0, glow: 0 });
+  const [plotExpanded, setPlotExpanded] = useState(false);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -53,13 +54,25 @@ export function DetailView() {
     value: string | null,
     ratio: number | null,
     fillGradient?: string,
+    meta?: React.ReactNode,
+    emptyLabel: string = "—",
   ) => (
     <div className="rounded-xl border border-border/70 bg-[var(--card-tile-bg)] p-3 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
       <div className="flex items-center justify-between text-xs uppercase text-muted-foreground">
         <div className="text-xs uppercase text-muted-foreground">{label}</div>
-        <span className="text-sm font-semibold text-[var(--rating-value-color)]">
-          {value ?? "—"}
-        </span>
+        <div className="text-right">
+          <div
+            className={cn(
+              "text-sm font-semibold",
+              value ? "text-[var(--rating-value-color)]" : "text-muted-foreground"
+            )}
+          >
+            {value ?? emptyLabel}
+          </div>
+          <div className="mt-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+            {meta ?? "No vote info"}
+          </div>
+        </div>
       </div>
       <div className="mt-3 h-3.5 rounded-full bg-[var(--rating-track-bg)] shadow-[var(--rating-track-shadow)]">
         <div
@@ -134,12 +147,20 @@ export function DetailView() {
                 <div>
                   <h2 className="text-2xl font-semibold">{detail.title}</h2>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                    <Badge variant="secondary" className="rounded-full px-3">
+                    <Badge variant="secondary" className="inline-flex items-center gap-2 rounded-full px-3">
+                      <Film className="h-3.5 w-3.5" />
                       {detail.type}
                     </Badge>
                     {detail.year ? (
-                      <Badge variant="secondary" className="rounded-full px-3">
+                      <Badge variant="secondary" className="inline-flex items-center gap-2 rounded-full px-3">
+                        <Calendar className="h-3.5 w-3.5" />
                         {formatYear(detail.year)}
+                      </Badge>
+                    ) : null}
+                    {detail.runtime ? (
+                      <Badge variant="secondary" className="inline-flex items-center gap-2 rounded-full px-3">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        {formatRuntime(detail.runtime)}
                       </Badge>
                     ) : null}
                   </div>
@@ -160,7 +181,7 @@ export function DetailView() {
                 ref={posterRef}
                 onMouseMove={handlePosterMove}
                 onMouseLeave={handlePosterLeave}
-                className="mx-auto h-[320px] w-[220px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out"
+                className="mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out"
                 style={{
                   transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
                   transformStyle: "preserve-3d",
@@ -208,9 +229,21 @@ export function DetailView() {
               <Separator />
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Plot</p>
-                <p className="text-sm leading-relaxed text-foreground/90">
+                <p
+                  className="text-sm leading-relaxed text-foreground/90"
+                  style={{ display: "-webkit-box", WebkitLineClamp: plotExpanded ? "unset" : 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                >
                   {detail.plot ?? "Plot unavailable."}
                 </p>
+                {detail.plot && detail.plot.length > 180 ? (
+                  <button
+                    type="button"
+                    onClick={() => setPlotExpanded((prev) => !prev)}
+                    className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+                  >
+                    {plotExpanded ? "Show less" : "Show more"}
+                  </button>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -222,14 +255,6 @@ export function DetailView() {
               <div className="text-sm font-semibold pb-4">Key Stats</div>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
-                  <Clock3 className="h-4 w-4" /> Runtime
-                </div>
-                <div className="mt-2 text-lg font-semibold">
-                  {formatRuntime(detail.runtime)}
-                </div>
-              </div>
               <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
                 <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                   <Calendar className="h-4 w-4" /> Released
@@ -275,6 +300,7 @@ export function DetailView() {
                 detail.rating ? `${detail.rating}/10` : null,
                 parseImdbScore(detail.rating),
                 "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
+                detail.votes ? `${formatVotes(detail.votes)} votes` : "No votes",
               )}
               {renderRatingSlider(
                 <Button
@@ -292,6 +318,8 @@ export function DetailView() {
                     getOmdbRating("Rotten Tomatoes"),
                 ),
                 "linear-gradient(90deg, rgba(181,59,64,0.9), rgba(128,34,38,0.95))",
+                undefined,
+                "No info",
               )}
               {renderRatingSlider(
                 <Button
@@ -306,6 +334,8 @@ export function DetailView() {
                   detail.metacriticScore ?? getOmdbRating("Metacritic"),
                 ),
                 "linear-gradient(90deg, rgba(235,235,235,0.7), rgba(170,170,170,0.95))",
+                undefined,
+                "No info",
               )}
             </CardContent>
           </Card>

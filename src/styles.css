@@ -28,12 +28,12 @@
     --secondary-foreground: oklch(0.21 0.006 285.885);
     --muted: oklch(0.967 0.001 286.375);
     --muted-foreground: oklch(0.552 0.016 285.938);
-    --accent: oklch(0.967 0.001 286.375);
+    --accent: oklch(86.686% 0.0001 271.152);
     --accent-foreground: oklch(0.21 0.006 285.885);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.92 0.004 286.32);
+    --border: oklch(92.797% 0.00011 271.152);
     --input: oklch(0.92 0.004 286.32);
-    --ring: oklch(0.705 0.015 286.067);
+    --ring: oklch(75.083% 0.00009 271.152);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
@@ -53,9 +53,14 @@
     --card-tile-bg: rgba(255, 255, 255, 0.04);
     --rating-track-bg: rgba(0, 0, 0, 0.08);
     --rating-track-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.12);
-    --rating-fill-gradient: linear-gradient(90deg, rgba(60,60,68,0.5), rgba(40,40,48,0.));
+    --rating-fill-gradient: linear-gradient(
+      90deg,
+      rgba(60, 60, 68, 0.5),
+      rgba(40, 40, 48, 0.7)
+    );
     --rating-fill-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
     --rating-value-color: rgba(10, 10, 12, 0.85);
+    --input-ring: rgba(0, 0, 0, 0.18);
   }
 
   .dark {
@@ -71,8 +76,8 @@
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.274 0.006 286.033);
     --muted-foreground: oklch(0.705 0.015 286.067);
-    --accent: oklch(51.716% 0.0839 145.756);
-    --accent-foreground: oklch(0.985 0 0);
+    --accent: oklch(30.919% 0.00004 271.152);
+    --accent-foreground: oklch(0.21 0.006 285.885);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
@@ -95,9 +100,14 @@
     --card-tile-bg: rgba(255, 255, 255, 0.05);
     --rating-track-bg: rgba(0, 0, 0, 0.3);
     --rating-track-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
-    --rating-fill-gradient: linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0.45));
+    --rating-fill-gradient: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0.45)
+    );
     --rating-fill-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
     --rating-value-color: rgba(255, 255, 255, 0.9);
+    --input-ring: rgba(255, 255, 255, 0.18);
   }
 
   * {
