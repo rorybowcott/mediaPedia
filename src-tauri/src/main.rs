@@ -63,6 +63,12 @@ fn main() {
             sql: include_str!("../migrations/003_drop_pinned.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "watch providers",
+            sql: include_str!("../migrations/004_add_watch_providers.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

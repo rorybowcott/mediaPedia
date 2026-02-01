@@ -25,6 +25,8 @@ export function DetailView() {
   const detailCardOrder = useAppStore((state) => state.detailCardOrder);
   const setDetailCardOrder = useAppStore((state) => state.setDetailCardOrder);
   const metadataLinkTarget = useAppStore((state) => state.metadataLinkTarget);
+  const watchRegion = useAppStore((state) => state.watchRegion);
+  const setWatchRegion = useAppStore((state) => state.setWatchRegion);
   const posterRef = useRef<HTMLDivElement>(null);
   const posterOverlayRef = useRef<HTMLImageElement>(null);
   const dragOrderRef = useRef<string[] | null>(null);
@@ -78,6 +80,46 @@ export function DetailView() {
     const parsed = Number.parseFloat(value);
     if (Number.isNaN(parsed)) return null;
     return Math.max(0, Math.min(100, parsed)) / 100;
+  };
+  const watchProviders = detail?.watchProviders ?? null;
+  const hasWatchProviders = Boolean(
+    watchProviders?.flatrate?.length ||
+      watchProviders?.rent?.length ||
+      watchProviders?.buy?.length
+  );
+  const renderProviderGroup = (
+    label: string,
+    providers?: { id: number; name: string; logoUrl?: string | null }[] | null,
+    link?: string | null
+  ) => {
+    if (!providers?.length) return null;
+    return (
+      <div className="space-y-2">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className="flex flex-wrap gap-2">
+          {providers.map((provider) => (
+            <button
+              key={provider.id}
+              type="button"
+              onClick={() => {
+                if (link) openLink(link);
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
+            >
+              {provider.logoUrl ? (
+                <img
+                  src={provider.logoUrl}
+                  alt={provider.name}
+                  className="h-4 w-4 rounded-sm object-contain"
+                  loading="lazy"
+                />
+              ) : null}
+              {provider.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
   const imdbValue = detail?.rating ?? null;
   const rottenValue = detail?.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes") ?? null;
@@ -573,6 +615,51 @@ export function DetailView() {
         </CardContent>
       </Card>
     ),
+    watch: (
+      <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
+        <CardHeader className="relative space-y-1">
+          {cardHandle("watch")}
+          <div className="flex items-center justify-between gap-3 pb-4">
+            <div className="text-sm font-semibold">Where to watch</div>
+            <select
+              value={watchRegion}
+              onChange={(event) => setWatchRegion(event.target.value)}
+              className="rounded-full border border-border/70 bg-background/40 px-2.5 py-1 text-xs text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="GB">GB</option>
+              <option value="US">US</option>
+              <option value="CA">CA</option>
+              <option value="AU">AU</option>
+              <option value="IE">IE</option>
+              <option value="NZ">NZ</option>
+              <option value="FR">FR</option>
+              <option value="DE">DE</option>
+              <option value="ES">ES</option>
+              <option value="IT">IT</option>
+              <option value="NL">NL</option>
+              <option value="SE">SE</option>
+              <option value="NO">NO</option>
+              <option value="DK">DK</option>
+              <option value="BR">BR</option>
+              <option value="IN">IN</option>
+              <option value="JP">JP</option>
+              <option value="KR">KR</option>
+            </select>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {!hasWatchProviders ? (
+            <div className="text-sm text-muted-foreground">No watch providers found for this title.</div>
+          ) : (
+            <>
+              {renderProviderGroup("Stream", watchProviders?.flatrate, watchProviders?.link)}
+              {renderProviderGroup("Rent", watchProviders?.rent, watchProviders?.link)}
+              {renderProviderGroup("Buy", watchProviders?.buy, watchProviders?.link)}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    ),
     people: (
       <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
         <CardHeader className="relative space-y-1">
@@ -621,7 +708,7 @@ export function DetailView() {
     ),
   };
 
-  const fallbackOrder = ["poster", "plot", "ratings", "people"];
+  const fallbackOrder = ["poster", "plot", "ratings", "watch", "people"];
   const activeOrder = dragOrder ?? detailCardOrder;
   const orderedCards = (activeOrder.length ? activeOrder : fallbackOrder)
     .map((id) => ({ id, node: cardsById[id] }))

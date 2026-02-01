@@ -15,6 +15,7 @@ import {
   fetchOmdbDetails,
   fetchOmdbDetailsByTitle,
   fetchTmdbDetails,
+  fetchTmdbWatchProviders,
   fetchTrending,
   resolveImdbId,
   searchOmdb,
@@ -58,6 +59,7 @@ interface AppState {
   showTrending: boolean;
   theme: "light" | "dark";
   metadataLinkTarget: "imdb" | "rotten" | "metacritic";
+  watchRegion: string;
   detailCardOrder: string[];
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
@@ -81,6 +83,7 @@ interface AppState {
   setShowTrending: (value: boolean) => Promise<void>;
   setTheme: (value: "light" | "dark") => Promise<void>;
   setMetadataLinkTarget: (value: "imdb" | "rotten" | "metacritic") => Promise<void>;
+  setWatchRegion: (value: string) => Promise<void>;
   setDetailCardOrder: (value: string[]) => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
@@ -94,7 +97,7 @@ const DEFAULT_SHORTCUTS: AppShortcuts = {
   refreshDetails: "CommandOrControl+R",
   openImdb: "CommandOrControl+O"
 };
-const DEFAULT_DETAIL_CARD_ORDER = ["poster", "plot", "ratings", "people"];
+const DEFAULT_DETAIL_CARD_ORDER = ["poster", "plot", "ratings", "watch", "people"];
 const appWindow = getCurrentWindow();
 
 function preferValue<T>(next: T | null | undefined, prev: T | null | undefined) {
@@ -125,6 +128,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   showTrending: true,
   theme: "dark",
   metadataLinkTarget: "imdb",
+  watchRegion: "GB",
   detailCardOrder: DEFAULT_DETAIL_CARD_ORDER,
   trending: [],
   localTitles: [],
@@ -154,6 +158,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       storedMetadataTarget === "rotten" || storedMetadataTarget === "metacritic"
         ? storedMetadataTarget
         : "imdb";
+    const storedWatchRegion = await getSetting("watch_region");
+    const watchRegion = storedWatchRegion ? storedWatchRegion.trim().toUpperCase() : "GB";
     const storedCardOrder = await getSetting("detail_card_order");
     let detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
     if (storedCardOrder) {
@@ -175,6 +181,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       showTrending,
       theme,
       metadataLinkTarget,
+      watchRegion,
       detailCardOrder
     });
     get().rebuildIndex();
@@ -258,6 +265,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       rottenTomatoesScore: preferValue(omdbData.rottenTomatoesScore, base?.rottenTomatoesScore),
       metacriticScore: preferValue(omdbData.metacriticScore, base?.metacriticScore),
       omdbRatings: preferValue(omdbData.omdbRatings, base?.omdbRatings),
+      watchProviders: base?.watchProviders ?? null,
       popularity: preferValue(base?.popularity ?? null, null),
       source: "omdb",
       expiresAt: nowUnix() + CACHE_EXPIRY_SECONDS
@@ -272,8 +280,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     if (tmdbId) {
+      const watchRegion = get().watchRegion;
       const tmdbType = cached?.type === "series" ? "tv" : "movie";
-      const tmdbData = await fetchTmdbDetails(tmdbId, keys.tmdbKey, tmdbType);
+      const [tmdbData, tmdbWatchProviders] = await Promise.all([
+        fetchTmdbDetails(tmdbId, keys.tmdbKey, tmdbType),
+        fetchTmdbWatchProviders(tmdbId, keys.tmdbKey, tmdbType, watchRegion)
+      ]);
       if (tmdbData) {
         tmdbSuccess = true;
         resolvedImdb = resolvedImdb ?? (await resolveImdbId(tmdbId, keys.tmdbKey, tmdbType));
@@ -298,6 +310,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           rottenTomatoesScore: preferValue(merged?.rottenTomatoesScore, null),
           metacriticScore: preferValue(merged?.metacriticScore, null),
           omdbRatings: preferValue(merged?.omdbRatings, null),
+          watchProviders: tmdbWatchProviders ?? null,
           popularity: preferValue(tmdbData.popularity, merged?.popularity),
           source: merged?.source ?? "tmdb",
           expiresAt: nowUnix() + CACHE_EXPIRY_SECONDS
@@ -439,6 +452,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   setMetadataLinkTarget: async (value) => {
     await setSetting("metadata_link_target", value);
     set({ metadataLinkTarget: value });
+  },
+  setWatchRegion: async (value) => {
+    const normalized = value.trim().toUpperCase().slice(0, 2);
+    const next = normalized || "GB";
+    await setSetting("watch_region", next);
+    set({ watchRegion: next });
+    if (get().view === "detail") {
+      await get().refreshDetails();
+    }
   },
   setDetailCardOrder: async (value) => {
     await setSetting("detail_card_order", JSON.stringify(value));

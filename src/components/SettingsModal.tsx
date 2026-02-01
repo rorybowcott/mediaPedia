@@ -63,6 +63,7 @@ export function SettingsModal() {
     return () => window.clearTimeout(handle);
   }, [shortcutDraft, setShortcuts, settingsOpen]);
 
+
   useEffect(() => {
     if (!recordingKey) return;
     const onKeyDown = (event: KeyboardEvent) => {

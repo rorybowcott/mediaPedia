@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { TitleRecord, TitleType } from "./types";
+import type { TitleRecord, TitleType, WatchProviders } from "./types";
 
 const omdbSearchSchema = z.object({
   Search: z.array(
@@ -79,7 +79,38 @@ const tmdbExternalSchema = z.object({
   imdb_id: z.string().nullable().optional()
 });
 
+const tmdbWatchProviderSchema = z.object({
+  provider_id: z.number(),
+  provider_name: z.string(),
+  logo_path: z.string().nullable().optional(),
+  display_priority: z.number().optional()
+});
+
+const tmdbWatchProvidersSchema = z.object({
+  results: z.record(
+    z.object({
+      link: z.string().optional(),
+      flatrate: z.array(tmdbWatchProviderSchema).optional(),
+      rent: z.array(tmdbWatchProviderSchema).optional(),
+      buy: z.array(tmdbWatchProviderSchema).optional()
+    })
+  ).optional()
+});
+
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
+const TMDB_LOGO_BASE = "https://image.tmdb.org/t/p/w92";
+
+function mapProviders(list?: z.infer<typeof tmdbWatchProviderSchema>[]) {
+  if (!list?.length) return null;
+  return [...list]
+    .sort((a, b) => (a.display_priority ?? 999) - (b.display_priority ?? 999))
+    .map((provider) => ({
+      id: provider.provider_id,
+      name: provider.provider_name,
+      logoUrl: provider.logo_path ? `${TMDB_LOGO_BASE}${provider.logo_path}` : null,
+      priority: provider.display_priority ?? null
+    }));
+}
 
 function mapType(value?: string | null): TitleType {
   if (!value) return "other";
@@ -247,6 +278,41 @@ export async function fetchTmdbDetails(tmdbId: number, key: string, type: "movie
     popularity: data.data.popularity ?? null,
     source: "tmdb"
   } satisfies Partial<TitleRecord>;
+}
+
+export async function fetchTmdbWatchProviders(
+  tmdbId: number,
+  key: string,
+  type: "movie" | "tv",
+  preferredRegion?: string | null
+): Promise<WatchProviders | null> {
+  const url = `https://api.themoviedb.org/3/${type}/${tmdbId}/watch/providers?api_key=${encodeURIComponent(key)}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = tmdbWatchProvidersSchema.safeParse(await res.json());
+  if (!data.success || !data.data.results) return null;
+  const results = data.data.results;
+  const normalizedPreferred = preferredRegion?.trim().toUpperCase();
+  const preferredRegions = [
+    ...(normalizedPreferred ? [normalizedPreferred] : []),
+    "US",
+    "CA",
+    "GB",
+    "AU"
+  ];
+  let regionKey = preferredRegions.find((region) => results[region]);
+  if (!regionKey) {
+    regionKey = Object.keys(results)[0];
+  }
+  if (!regionKey) return null;
+  const region = results[regionKey];
+  return {
+    country: regionKey,
+    link: region.link ?? null,
+    flatrate: mapProviders(region.flatrate),
+    rent: mapProviders(region.rent),
+    buy: mapProviders(region.buy)
+  };
 }
 
 export async function resolveImdbId(tmdbId: number, key: string, type: "movie" | "tv") {

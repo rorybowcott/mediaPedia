@@ -1,5 +1,20 @@
 export type TitleType = "movie" | "series" | "documentary" | "other";
 
+export interface WatchProvider {
+  id: number;
+  name: string;
+  logoUrl?: string | null;
+  priority?: number | null;
+}
+
+export interface WatchProviders {
+  country: string;
+  link?: string | null;
+  flatrate?: WatchProvider[] | null;
+  rent?: WatchProvider[] | null;
+  buy?: WatchProvider[] | null;
+}
+
 export interface TitleRecord {
   id: string;
   imdbId?: string | null;
@@ -21,6 +36,7 @@ export interface TitleRecord {
   rottenTomatoesScore?: string | null;
   metacriticScore?: string | null;
   omdbRatings?: { source: string; value: string }[] | null;
+  watchProviders?: WatchProviders | null;
   popularity?: number | null;
   source?: "omdb" | "tmdb" | "cache" | "mixed";
   lastUpdatedAt?: number | null;
