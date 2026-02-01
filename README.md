@@ -2,11 +2,7 @@
 
 MediaPedia is a keyboard-first, Raycast-style desktop overlay for Windows and macOS. Type a title and get fast, reliable film/TV metadata with progressive loading, local caching, and fallback sources when OMDb is missing fields.
 
-![](https://imgur.com/a/JcQcUmZ)
-
-<video width="320" height="240" controls>
-  <source src="https://imgur.com/a/JcQcUmZ" type="video/mp4">
-</video>
+[mediapedia.webm](https://github.com/user-attachments/assets/29aea42e-db44-49dc-95e7-e43d12da3300)
 
 ## Features
 - Global hotkey to open the overlay and focus search
