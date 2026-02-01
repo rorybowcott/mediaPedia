@@ -26,7 +26,7 @@ import { nowUnix } from "../lib/utils";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { imdbUrl } from "../lib/links";
+import { imdbUrl, metacriticUrl, rottenTomatoesUrl } from "../lib/links";
 
 function formatInvokeError(error: unknown, fallback: string) {
   if (error instanceof Error) return error.message;
@@ -316,8 +316,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!omdbSuccess) {
       const titleLookup = merged?.title ?? cached?.title ?? null;
       const yearLookup = merged?.year ?? cached?.year ?? null;
+      const typeLookup = merged?.type === "series" ? "series" : merged?.type === "movie" ? "movie" : null;
       if (titleLookup) {
-        const omdbData = await fetchOmdbDetailsByTitle(titleLookup, keys.omdbKey, yearLookup);
+        const omdbData = await fetchOmdbDetailsByTitle(titleLookup, keys.omdbKey, yearLookup, typeLookup);
         if (omdbData) {
           omdbSuccess = true;
           merged = applyOmdb(omdbData, merged ?? cached);
@@ -342,14 +343,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   openImdb: async () => {
-    const { selectedId, suggestions, selectionIndex, detail } = get();
+    const { selectedId, suggestions, selectionIndex, detail, metadataLinkTarget } = get();
     const selected = suggestions[selectionIndex];
     const targetId = selectedId ?? selected?.id;
     if (!targetId) return;
     const cached = await getTitleById(targetId);
+    const title = detail?.title ?? cached?.title ?? selected?.title ?? null;
     const imdbId = detail?.imdbId ?? cached?.imdbId ?? (targetId.startsWith("tt") ? targetId : null);
-    if (!imdbId) return;
-    await open(imdbUrl(imdbId));
+    let url: string | null = null;
+    if (metadataLinkTarget === "rotten") {
+      if (!title) return;
+      url = rottenTomatoesUrl(title);
+    } else if (metadataLinkTarget === "metacritic") {
+      if (!title) return;
+      url = metacriticUrl(title);
+    } else {
+      if (!imdbId) return;
+      url = imdbUrl(imdbId);
+    }
+    await open(url);
     await appWindow.hide();
   },
   testKeys: async (keys) => {

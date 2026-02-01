@@ -23,6 +23,7 @@ const omdbDetailSchema = z.object({
   Runtime: z.string().optional(),
   imdbRating: z.string().optional(),
   imdbVotes: z.string().optional(),
+  Metascore: z.string().optional(),
   Genre: z.string().optional(),
   Plot: z.string().optional(),
   Actors: z.string().optional(),
@@ -30,6 +31,7 @@ const omdbDetailSchema = z.object({
   Country: z.string().optional(),
   Language: z.string().optional(),
   Poster: z.string().optional(),
+  tomatoMeter: z.string().optional(),
   Ratings: z
     .array(
       z.object({
@@ -106,11 +108,13 @@ function mapOmdbDetail(data: z.infer<typeof omdbDetailSchema>, fallbackImdbId?: 
     .map((genre) => genre.trim())
     .filter(Boolean);
   const ratings = data.Ratings ?? [];
+  const tomatoMeter = normalizeOmdbValue(data.tomatoMeter);
   const rottenTomatoesScore = normalizeOmdbValue(
-    ratings.find((rating) => rating.Source === "Rotten Tomatoes")?.Value
+    ratings.find((rating) => rating.Source === "Rotten Tomatoes")?.Value ??
+      (tomatoMeter ? `${tomatoMeter}%` : null)
   );
   const metacriticScore = normalizeOmdbValue(
-    ratings.find((rating) => rating.Source === "Metacritic")?.Value
+    ratings.find((rating) => rating.Source === "Metacritic")?.Value ?? data.Metascore
   );
   const omdbRatings = ratings.length
     ? ratings.map((rating) => ({ source: rating.Source, value: rating.Value }))
@@ -201,16 +205,22 @@ export async function searchTmdb(query: string, key: string): Promise<TitleRecor
 }
 
 export async function fetchOmdbDetails(imdbId: string, key: string) {
-  const url = `https://www.omdbapi.com/?apikey=${encodeURIComponent(key)}&i=${encodeURIComponent(imdbId)}&plot=full`;
+  const url = `https://www.omdbapi.com/?apikey=${encodeURIComponent(key)}&i=${encodeURIComponent(imdbId)}&plot=full&tomatoes=true`;
   const res = await fetch(url);
   const data = omdbDetailSchema.safeParse(await res.json());
   if (!data.success || data.data.Error) return null;
   return mapOmdbDetail(data.data, imdbId);
 }
 
-export async function fetchOmdbDetailsByTitle(title: string, key: string, year?: string | number | null) {
-  const base = `https://www.omdbapi.com/?apikey=${encodeURIComponent(key)}&t=${encodeURIComponent(title)}&plot=full`;
-  const url = year ? `${base}&y=${encodeURIComponent(String(year))}` : base;
+export async function fetchOmdbDetailsByTitle(
+  title: string,
+  key: string,
+  year?: string | number | null,
+  type?: "movie" | "series" | null
+) {
+  const base = `https://www.omdbapi.com/?apikey=${encodeURIComponent(key)}&t=${encodeURIComponent(title)}&plot=full&tomatoes=true`;
+  const withYear = year ? `${base}&y=${encodeURIComponent(String(year))}` : base;
+  const url = type ? `${withYear}&type=${encodeURIComponent(type)}` : withYear;
   const res = await fetch(url);
   const data = omdbDetailSchema.safeParse(await res.json());
   if (!data.success || data.data.Error) return null;

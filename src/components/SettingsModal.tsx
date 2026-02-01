@@ -281,7 +281,7 @@ export function SettingsModal() {
                 [
                   ["globalSearch", "Global Search"],
                   ["refreshDetails", "Refresh Details"],
-                  ["openImdb", "Open IMDb"]
+                  ["openImdb", "Open Title"]
                 ] as Array<[keyof AppShortcuts, string]>
               ).map(([key, label]) => (
                 <div

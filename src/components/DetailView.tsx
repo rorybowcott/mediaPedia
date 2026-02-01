@@ -79,6 +79,14 @@ export function DetailView() {
     if (Number.isNaN(parsed)) return null;
     return Math.max(0, Math.min(100, parsed)) / 100;
   };
+  const imdbValue = detail?.rating ?? null;
+  const rottenValue = detail?.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes") ?? null;
+  const metacriticValue = detail?.metacriticScore ?? getOmdbRating("Metacritic") ?? null;
+  const hasAnyRating =
+    Boolean(imdbValue) ||
+    Boolean(detail?.votes) ||
+    Boolean(rottenValue) ||
+    Boolean(metacriticValue);
   const renderRatingSlider = (
     label: React.ReactNode,
     value: string | null,
@@ -514,51 +522,54 @@ export function DetailView() {
           <div className="text-sm font-semibold pb-4">Ratings</div>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
-          {renderRatingSlider(
-            <Button
-              variant="outline"
-              className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
-              onClick={() => openLink(imdbUrl(detail.imdbId!))}
-              title="IMDb (Cmd/Ctrl+O)"
-              aria-keyshortcuts="Control+O Meta+O"
-            >
-              IMDb
-            </Button>,
-            detail.rating ? `${detail.rating}/10` : null,
-            parseImdbScore(detail.rating),
-            "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
-            detail.votes ? `${formatVotes(detail.votes)} votes` : "No votes",
-          )}
-          {renderRatingSlider(
-            <Button
-              variant="outline"
-              className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
-              onClick={() => openLink(rottenTomatoesUrl(detail.title))}
-            >
-              Rotten Tomatoes
-            </Button>,
-            detail.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes") ?? null,
-            parsePercentScore(
-              detail.rottenTomatoesScore ?? getOmdbRating("Rotten Tomatoes"),
-            ),
-            "linear-gradient(90deg, rgba(181,59,64,0.9), rgba(128,34,38,0.95))",
-            undefined,
-            "No info",
-          )}
-          {renderRatingSlider(
-            <Button
-              variant="outline"
-              className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
-              onClick={() => openLink(metacriticUrl(detail.title))}
-            >
-              Metacritic
-            </Button>,
-            detail.metacriticScore ?? getOmdbRating("Metacritic") ?? null,
-            parseMetacriticScore(detail.metacriticScore ?? getOmdbRating("Metacritic")),
-            "linear-gradient(90deg, rgba(235,235,235,0.7), rgba(170,170,170,0.95))",
-            undefined,
-            "No info",
-          )}
+          {!hasAnyRating ? (
+            <div className="text-sm text-muted-foreground">No ratings available for this title yet.</div>
+          ) : null}
+          {imdbValue || detail.votes
+            ? renderRatingSlider(
+                <Button
+                  variant="outline"
+                  className="gap-2 border-transparent bg-[#E0C14A] p-0.5 pl-2 pr-2 text-black hover:bg-[#CFB13F]"
+                  onClick={() => openLink(imdbUrl(detail.imdbId!))}
+                  title="IMDb (Cmd/Ctrl+O)"
+                  aria-keyshortcuts="Control+O Meta+O"
+                >
+                  IMDb
+                </Button>,
+                imdbValue ? `${imdbValue}/10` : null,
+                parseImdbScore(imdbValue),
+                "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
+                detail.votes ? `${formatVotes(detail.votes)} votes` : "No votes",
+              )
+            : null}
+          {rottenValue
+            ? renderRatingSlider(
+                <Button
+                  variant="outline"
+                  className="gap-2 border-transparent bg-[#B53B40] p-0.5 pl-2 pr-2 text-white hover:bg-[#9C3236]"
+                  onClick={() => openLink(rottenTomatoesUrl(detail.title))}
+                >
+                  Rotten Tomatoes
+                </Button>,
+                rottenValue,
+                parsePercentScore(rottenValue),
+                "linear-gradient(90deg, rgba(181,59,64,0.9), rgba(128,34,38,0.95))",
+              )
+            : null}
+          {metacriticValue
+            ? renderRatingSlider(
+                <Button
+                  variant="outline"
+                  className="gap-2 border-transparent bg-[#1F1F1F] p-0.5 pl-2 pr-2 text-white hover:bg-[#141414]"
+                  onClick={() => openLink(metacriticUrl(detail.title))}
+                >
+                  Metacritic
+                </Button>,
+                metacriticValue,
+                parseMetacriticScore(metacriticValue),
+                "linear-gradient(90deg, rgba(235,235,235,0.7), rgba(170,170,170,0.95))",
+              )
+            : null}
         </CardContent>
       </Card>
     ),
