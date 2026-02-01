@@ -57,6 +57,7 @@ interface AppState {
   view: "list" | "detail";
   showTrending: boolean;
   theme: "light" | "dark";
+  metadataLinkTarget: "imdb" | "rotten" | "metacritic";
   detailCardOrder: string[];
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
@@ -79,6 +80,7 @@ interface AppState {
   setShortcuts: (shortcuts: AppShortcuts) => Promise<void>;
   setShowTrending: (value: boolean) => Promise<void>;
   setTheme: (value: "light" | "dark") => Promise<void>;
+  setMetadataLinkTarget: (value: "imdb" | "rotten" | "metacritic") => Promise<void>;
   setDetailCardOrder: (value: string[]) => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
@@ -122,6 +124,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   view: "list",
   showTrending: true,
   theme: "dark",
+  metadataLinkTarget: "imdb",
   detailCardOrder: DEFAULT_DETAIL_CARD_ORDER,
   trending: [],
   localTitles: [],
@@ -146,6 +149,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     const showTrending = storedShowTrending ? storedShowTrending === "true" : true;
     const storedTheme = await getSetting("theme");
     const theme = storedTheme === "light" ? "light" : "dark";
+    const storedMetadataTarget = await getSetting("metadata_link_target");
+    const metadataLinkTarget =
+      storedMetadataTarget === "rotten" || storedMetadataTarget === "metacritic"
+        ? storedMetadataTarget
+        : "imdb";
     const storedCardOrder = await getSetting("detail_card_order");
     let detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
     if (storedCardOrder) {
@@ -159,7 +167,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
       }
     }
-    set({ keys, shortcuts, localTitles, trending, showTrending, theme, detailCardOrder });
+    set({
+      keys,
+      shortcuts,
+      localTitles,
+      trending,
+      showTrending,
+      theme,
+      metadataLinkTarget,
+      detailCardOrder
+    });
     get().rebuildIndex();
 
     const lastRefresh = await getSetting("last_trending_refresh");
@@ -406,6 +423,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTheme: async (value) => {
     await setSetting("theme", value);
     set({ theme: value });
+  },
+  setMetadataLinkTarget: async (value) => {
+    await setSetting("metadata_link_target", value);
+    set({ metadataLinkTarget: value });
   },
   setDetailCardOrder: async (value) => {
     await setSetting("detail_card_order", JSON.stringify(value));

@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useAppStore } from "../store/useAppStore";
 import type { AppShortcuts } from "../lib/types";
-import { Check, CornerDownLeft, Ban, X } from "lucide-react";
+import { Check, CornerDownLeft, X } from "lucide-react";
 
 const DEFAULT_SHORTCUTS: AppShortcuts = {
   globalSearch: "CommandOrControl+K",
@@ -25,6 +25,8 @@ export function SettingsModal() {
   const setShowTrending = useAppStore((state) => state.setShowTrending);
   const theme = useAppStore((state) => state.theme);
   const setTheme = useAppStore((state) => state.setTheme);
+  const metadataLinkTarget = useAppStore((state) => state.metadataLinkTarget);
+  const setMetadataLinkTarget = useAppStore((state) => state.setMetadataLinkTarget);
 
   const [omdbKey, setOmdbKey] = useState(keys.omdbKey ?? "");
   const [tmdbKey, setTmdbKey] = useState(keys.tmdbKey ?? "");
@@ -240,6 +242,37 @@ export function SettingsModal() {
             >
               {theme === "dark" ? "Dark" : "Light"}
             </button>
+          </div>
+          <div className="flex items-center justify-between rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+            <div>
+              <div className="text-sm font-semibold">Metadata links</div>
+              <div className="text-xs text-muted-foreground">
+                Choose where pills and metadata clicks should open.
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {(
+                [
+                  ["imdb", "IMDb"],
+                  ["rotten", "Rotten"],
+                  ["metacritic", "Metacritic"]
+                ] as Array<["imdb" | "rotten" | "metacritic", string]>
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setMetadataLinkTarget(value)}
+                  className={`rounded-full border border-border/70 px-3 py-1 text-xs transition ${
+                    metadataLinkTarget === value
+                      ? "bg-foreground/10 text-foreground"
+                      : "bg-background/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                  aria-pressed={metadataLinkTarget === value}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <div className="text-sm font-semibold">Keyboard Shortcuts</div>

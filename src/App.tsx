@@ -86,10 +86,11 @@ function App() {
   useEffect(() => {
     const handler = async () => {
       try {
+        const isVisible = await appWindow.isVisible();
         const cursor = await cursorPosition();
         const monitor = await monitorFromPoint(cursor.x, cursor.y);
         const size = await appWindow.outerSize();
-        if (monitor && size) {
+        if (!isVisible && monitor && size) {
           const centerX = Math.round((monitor.position.x + monitor.size.width / 2) - size.width / 2);
           const centerY = Math.round((monitor.position.y + monitor.size.height / 2) - size.height / 2);
           await appWindow.setPosition(new LogicalPosition(centerX, centerY));
@@ -325,32 +326,48 @@ function App() {
       className="flex h-screen w-screen flex-col overflow-hidden rounded-[20px] bg-background text-foreground"
       data-tauri-drag-region
     >
-      <Header />
-      <SearchInput />
+      <div
+        className="sticky top-0 z-20 pointer-events-none relative bg-gradient-to-b from-transparent via-background/30 to-background/60 pb-6 pt-1 backdrop-blur-md"
+        style={{
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 70%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, black 0%, black 70%, transparent 100%)"
+        }}
+      >
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-b from-background/0 via-background/35 to-background/75 backdrop-blur-md"
+          style={{ maskImage: "linear-gradient(to bottom, transparent 0%, black 45%, black 100%)" }}
+        />
+        <div className="pointer-events-auto">
+          <Header />
+          <SearchInput />
+        </div>
+      </div>
       {errorMessage ? <p className="px-5 py-2 text-sm text-red-400">{errorMessage}</p> : null}
-      <ScrollArea className="mt-3 flex-1">
-        {view === "detail" ? (
-          <DetailView />
-        ) : hasQuery ? (
-          <SuggestionsList
-            suggestions={suggestions}
-            selectionIndex={selectionIndex}
-            onSelect={selectSuggestion}
-            listId="search-results"
-            listLabel="Search results"
-          />
-        ) : (
-          <div className="space-y-6 pb-6">
-            {showTrending ? (
-              <TrendingSection
-                suggestions={trendingSuggestions}
-                selectionIndex={selectionIndex}
-                selectionOffset={0}
-                onSelect={selectSuggestion}
-              />
-            ) : null}
-          </div>
-        )}
+      <ScrollArea className="-mt-14 flex-1">
+        <div className="pt-10">
+          {view === "detail" ? (
+            <DetailView />
+          ) : hasQuery ? (
+            <SuggestionsList
+              suggestions={suggestions}
+              selectionIndex={selectionIndex}
+              onSelect={selectSuggestion}
+              listId="search-results"
+              listLabel="Search results"
+            />
+          ) : (
+            <div className="space-y-6 pb-6">
+              {showTrending ? (
+                <TrendingSection
+                  suggestions={trendingSuggestions}
+                  selectionIndex={selectionIndex}
+                  selectionOffset={0}
+                  onSelect={selectSuggestion}
+                />
+              ) : null}
+            </div>
+          )}
+        </div>
       </ScrollArea>
       <SettingsModal />
       <ShortcutsModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />

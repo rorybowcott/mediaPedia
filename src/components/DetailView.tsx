@@ -24,6 +24,7 @@ export function DetailView() {
   const detailLoading = useAppStore((state) => state.detailLoading);
   const detailCardOrder = useAppStore((state) => state.detailCardOrder);
   const setDetailCardOrder = useAppStore((state) => state.setDetailCardOrder);
+  const metadataLinkTarget = useAppStore((state) => state.metadataLinkTarget);
   const posterRef = useRef<HTMLDivElement>(null);
   const posterOverlayRef = useRef<HTMLImageElement>(null);
   const dragOrderRef = useRef<string[] | null>(null);
@@ -153,6 +154,50 @@ export function DetailView() {
   const openLink = async (url: string) => {
     await open(url);
     await appWindow.hide();
+  };
+  const getSearchUrl = (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return null;
+    if (metadataLinkTarget === "rotten") {
+      return `https://www.rottentomatoes.com/search?search=${encodeURIComponent(trimmed)}`;
+    }
+    if (metadataLinkTarget === "metacritic") {
+      return `https://www.metacritic.com/search/${encodeURIComponent(trimmed)}/`;
+    }
+    return `https://www.imdb.com/find?q=${encodeURIComponent(trimmed)}`;
+  };
+  const getImdbGenreSlug = (genre: string) => {
+    const trimmed = genre.trim().toLowerCase();
+    const map: Record<string, string> = {
+      "sci-fi": "sci-fi",
+      "science fiction": "sci-fi",
+      "film-noir": "film-noir",
+      "film noir": "film-noir",
+      "tv movie": "tv-movie",
+      "talk-show": "talk-show",
+      "talk show": "talk-show",
+      "game-show": "game-show",
+      "game show": "game-show",
+      "reality-tv": "reality-tv",
+      "reality tv": "reality-tv"
+    };
+    if (map[trimmed]) return map[trimmed];
+    return trimmed.replace(/&/g, "and").replace(/\s+/g, "-");
+  };
+  const getGenreUrl = (genre: string) => {
+    if (metadataLinkTarget === "imdb") {
+      const slug = getImdbGenreSlug(genre);
+      return `https://www.imdb.com/search/title/?genres=${encodeURIComponent(slug)}`;
+    }
+    return getSearchUrl(`${genre} genre`);
+  };
+  const handleSearchClick = (query: string) => {
+    const url = getSearchUrl(query);
+    if (url) openLink(url);
+  };
+  const handleGenreClick = (genre: string) => {
+    const url = getGenreUrl(genre);
+    if (url) openLink(url);
   };
   const updatePosterTilt = (rect: DOMRect, clientX: number, clientY: number) => {
     const x = (clientX - rect.left) / rect.width - 0.5;
@@ -337,41 +382,32 @@ export function DetailView() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-2xl font-semibold">{detail.title}</h2>
-              <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                <Badge
-                  variant="secondary"
-                  className="inline-flex items-center gap-2 rounded-full px-3"
-                >
+              <div className="mt-2 flex flex-wrap gap-2 text-xs tracking-wide text-muted-foreground">
+                <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs uppercase tracking-wide text-secondary-foreground">
                   <Film className="h-3.5 w-3.5" />
                   {detail.type}
-                </Badge>
+                </div>
                 {detail.year ? (
-                  <Badge
-                    variant="secondary"
-                    className="inline-flex items-center gap-2 rounded-full px-3"
-                  >
+                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground">
                     <Calendar className="h-3.5 w-3.5" />
                     {formatYear(detail.year)}
-                  </Badge>
+                  </div>
                 ) : null}
                 {detail.runtime ? (
-                  <Badge
-                    variant="secondary"
-                    className="inline-flex items-center gap-2 rounded-full px-3"
-                  >
+                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs uppercase tracking-wide text-secondary-foreground">
                     <Clock3 className="h-3.5 w-3.5" />
                     {formatRuntime(detail.runtime)}
-                  </Badge>
+                  </div>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => openLink(trailerUrl(detail.title, detail.year))}
+                  className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
+                >
+                  Trailers <ExternalLink className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
-            <Button
-              variant="outline"
-              className="border-transparent gap-2 p-0.5 pl-2 pr-2"
-              onClick={() => openLink(trailerUrl(detail.title, detail.year))}
-            >
-              Trailers <ExternalLink className="h-4 w-4" />
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-5">
@@ -424,19 +460,20 @@ export function DetailView() {
           <div className="space-y-2 text-sm">
             <p className="text-muted-foreground">Genres</p>
             <div className="flex flex-wrap gap-2">
-              {(detail.genres ?? []).length
-                ? detail.genres?.map((genre) => (
-                    <Badge
-                      key={genre}
-                      variant="secondary"
-                      className="rounded-full px-3 py-1"
-                    >
-                      {genre}
-                    </Badge>
-                  ))
-                : "—"}
-            </div>
-          </div>
+                  {(detail.genres ?? []).length
+                    ? detail.genres?.map((genre) => (
+                        <button
+                          key={genre}
+                          type="button"
+                          onClick={() => handleGenreClick(genre)}
+                          className="rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
+                        >
+                          {genre}
+                        </button>
+                      ))
+                    : "—"}
+                </div>
+              </div>
         </CardContent>
       </Card>
     ),
@@ -536,9 +573,13 @@ export function DetailView() {
             <p className="text-muted-foreground">Director</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {detail.director ? (
-                <Badge variant="secondary" className="rounded-full px-3 py-1">
+                <button
+                  type="button"
+                  onClick={() => handleSearchClick(detail.director)}
+                  className="rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
+                >
                   {detail.director}
-                </Badge>
+                </button>
               ) : (
                 "—"
               )}
@@ -552,13 +593,14 @@ export function DetailView() {
                     .split(",")
                     .slice(0, 6)
                     .map((name) => (
-                      <Badge
+                      <button
                         key={name.trim()}
-                        variant="secondary"
-                        className="rounded-full px-3 py-1"
+                        type="button"
+                        onClick={() => handleSearchClick(name.trim())}
+                        className="rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
                       >
                         {name.trim()}
-                      </Badge>
+                      </button>
                     ))
                 : "—"}
             </div>
