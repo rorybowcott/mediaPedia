@@ -43,6 +43,11 @@ function formatInvokeError(error: unknown, fallback: string) {
   }
 }
 
+interface DetailCardOrder {
+  left: string[];
+  right: string[];
+}
+
 interface AppState {
   keys: AppKeys;
   keysValid: boolean;
@@ -60,7 +65,7 @@ interface AppState {
   theme: "light" | "dark";
   metadataLinkTarget: "imdb" | "rotten" | "metacritic";
   watchRegion: string;
-  detailCardOrder: string[];
+  detailCardOrder: DetailCardOrder;
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
   lastRefresh: number | null;
@@ -84,7 +89,7 @@ interface AppState {
   setTheme: (value: "light" | "dark") => Promise<void>;
   setMetadataLinkTarget: (value: "imdb" | "rotten" | "metacritic") => Promise<void>;
   setWatchRegion: (value: string) => Promise<void>;
-  setDetailCardOrder: (value: string[]) => Promise<void>;
+  setDetailCardOrder: (value: DetailCardOrder) => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
   fetchRemoteSuggestions: () => Promise<void>;
@@ -97,7 +102,58 @@ const DEFAULT_SHORTCUTS: AppShortcuts = {
   refreshDetails: "CommandOrControl+R",
   openImdb: "CommandOrControl+O"
 };
-const DEFAULT_DETAIL_CARD_ORDER = ["poster", "plot", "ratings", "watch", "people"];
+const DEFAULT_DETAIL_CARD_ORDER: DetailCardOrder = {
+  left: ["poster", "ratings", "people"],
+  right: ["plot", "watch"]
+};
+const DETAIL_CARD_IDS = [...DEFAULT_DETAIL_CARD_ORDER.left, ...DEFAULT_DETAIL_CARD_ORDER.right];
+
+function normalizeDetailCardOrder(value: DetailCardOrder): DetailCardOrder {
+  const seen = new Set<string>();
+  const left = value.left.filter((id) => {
+    if (!DETAIL_CARD_IDS.includes(id) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  const right = value.right.filter((id) => {
+    if (!DETAIL_CARD_IDS.includes(id) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+  const missing = DETAIL_CARD_IDS.filter((id) => !seen.has(id));
+  missing.forEach((id, index) => {
+    (index % 2 === 0 ? left : right).push(id);
+  });
+  return { left, right };
+}
+
+function parseDetailCardOrder(raw: string | null): DetailCardOrder {
+  if (!raw) return DEFAULT_DETAIL_CARD_ORDER;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      const left: string[] = [];
+      const right: string[] = [];
+      parsed.forEach((id, index) => {
+        (index % 2 === 0 ? left : right).push(id);
+      });
+      return normalizeDetailCardOrder({ left, right });
+    }
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "left" in parsed &&
+      "right" in parsed &&
+      Array.isArray((parsed as DetailCardOrder).left) &&
+      Array.isArray((parsed as DetailCardOrder).right)
+    ) {
+      return normalizeDetailCardOrder(parsed as DetailCardOrder);
+    }
+  } catch {
+    return DEFAULT_DETAIL_CARD_ORDER;
+  }
+  return DEFAULT_DETAIL_CARD_ORDER;
+}
 const appWindow = getCurrentWindow();
 
 function preferValue<T>(next: T | null | undefined, prev: T | null | undefined) {
@@ -161,18 +217,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const storedWatchRegion = await getSetting("watch_region");
     const watchRegion = storedWatchRegion ? storedWatchRegion.trim().toUpperCase() : "GB";
     const storedCardOrder = await getSetting("detail_card_order");
-    let detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
-    if (storedCardOrder) {
-      try {
-        const parsed = JSON.parse(storedCardOrder) as string[];
-        const hasAll = DEFAULT_DETAIL_CARD_ORDER.every((id) => parsed.includes(id));
-        if (Array.isArray(parsed) && hasAll) {
-          detailCardOrder = parsed.filter((id) => DEFAULT_DETAIL_CARD_ORDER.includes(id));
-        }
-      } catch {
-        detailCardOrder = DEFAULT_DETAIL_CARD_ORDER;
-      }
-    }
+    const detailCardOrder = parseDetailCardOrder(storedCardOrder);
     set({
       keys,
       shortcuts,
@@ -463,8 +508,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   setDetailCardOrder: async (value) => {
-    await setSetting("detail_card_order", JSON.stringify(value));
-    set({ detailCardOrder: value });
+    const normalized = normalizeDetailCardOrder(value);
+    await setSetting("detail_card_order", JSON.stringify(normalized));
+    set({ detailCardOrder: normalized });
   },
   refreshTrending: async () => {
     const { keys } = get();

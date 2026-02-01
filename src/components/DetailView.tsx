@@ -29,7 +29,7 @@ export function DetailView() {
   const setWatchRegion = useAppStore((state) => state.setWatchRegion);
   const posterRef = useRef<HTMLDivElement>(null);
   const posterOverlayRef = useRef<HTMLImageElement>(null);
-  const dragOrderRef = useRef<string[] | null>(null);
+  const dragOrderRef = useRef<{ left: string[]; right: string[] } | null>(null);
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const cardsContainerRef = useRef<HTMLDivElement>(null);
   const leftColumnRef = useRef<HTMLDivElement>(null);
@@ -53,7 +53,7 @@ export function DetailView() {
   const [dragOver, setDragOver] = useState<{ id: string; position: "before" | "after" } | null>(
     null,
   );
-  const [dragOrder, setDragOrder] = useState<string[] | null>(null);
+  const [dragOrder, setDragOrder] = useState<{ left: string[]; right: string[] } | null>(null);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null);
   const [dragSize, setDragSize] = useState<{ width: number; height: number } | null>(null);
@@ -343,32 +343,36 @@ export function DetailView() {
       const element = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
       const cardEl = element?.closest?.("[data-card-id]") as HTMLElement | null;
       if (!cardEl) {
-        const container = cardsContainerRef.current;
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          const inside =
-            event.clientX >= rect.left &&
-            event.clientX <= rect.right &&
-            event.clientY >= rect.top &&
-            event.clientY <= rect.bottom;
-          if (inside) {
-            const base = dragOrderRef.current ?? detailCardOrder;
-            const next = base.filter((cardId) => cardId !== draggingId);
-            if (next.length) {
-              const mid = rect.left + rect.width / 2;
-              const column = event.clientX <= mid ? "left" : "right";
-              const leftCards = next.filter((_, index) => index % 2 === 0);
-              const rightCards = next.filter((_, index) => index % 2 === 1);
-              const targetList = column === "left" ? leftCards : rightCards;
-              const lastId = targetList[targetList.length - 1] ?? next[next.length - 1];
-              setDragOver({ id: lastId, position: "after" });
-              next.splice(next.length, 0, draggingId);
-              dragOrderRef.current = next;
-              setDragOrder(next);
-              return;
-            }
+        const base = dragOrderRef.current ?? detailCardOrder;
+        const nextLeft = base.left.filter((cardId) => cardId !== draggingId);
+        const nextRight = base.right.filter((cardId) => cardId !== draggingId);
+        const leftRect = leftColumnRef.current?.getBoundingClientRect() ?? null;
+        const rightRect = rightColumnRef.current?.getBoundingClientRect() ?? null;
+        const dropPadding = 160;
+
+        const isInColumn = (rect: DOMRect | null) =>
+          rect &&
+          event.clientX >= rect.left &&
+          event.clientX <= rect.right &&
+          event.clientY >= rect.top &&
+          event.clientY <= rect.bottom + dropPadding;
+
+        const column = isInColumn(leftRect) ? "left" : isInColumn(rightRect) ? "right" : null;
+        if (column) {
+          const targetList = column === "left" ? nextLeft : nextRight;
+          const lastId = targetList[targetList.length - 1];
+          if (lastId) {
+            setDragOver({ id: lastId, position: "after" });
+            targetList.splice(targetList.length, 0, draggingId);
+          } else {
+            targetList.splice(targetList.length, 0, draggingId);
           }
+          const next = { left: nextLeft, right: nextRight };
+          dragOrderRef.current = next;
+          setDragOrder(next);
+          return;
         }
+
         setDragOver(null);
         return;
       }
@@ -382,10 +386,14 @@ export function DetailView() {
       setDragOver({ id: overId, position: isAfter ? "after" : "before" });
       setDragOrder((current) => {
         const base = current ?? detailCardOrder;
-        const next = base.filter((cardId) => cardId !== draggingId);
-        const targetIndex = next.indexOf(overId);
+        const targetColumn = base.left.includes(overId) ? "left" : "right";
+        const nextLeft = base.left.filter((cardId) => cardId !== draggingId);
+        const nextRight = base.right.filter((cardId) => cardId !== draggingId);
+        const targetList = targetColumn === "left" ? nextLeft : nextRight;
+        const targetIndex = targetList.indexOf(overId);
         const insertIndex = isAfter ? targetIndex + 1 : targetIndex;
-        next.splice(insertIndex, 0, draggingId);
+        targetList.splice(insertIndex, 0, draggingId);
+        const next = { left: nextLeft, right: nextRight };
         dragOrderRef.current = next;
         return next;
       });
@@ -708,13 +716,9 @@ export function DetailView() {
     ),
   };
 
-  const fallbackOrder = ["poster", "plot", "ratings", "watch", "people"];
   const activeOrder = dragOrder ?? detailCardOrder;
-  const orderedCards = (activeOrder.length ? activeOrder : fallbackOrder)
-    .map((id) => ({ id, node: cardsById[id] }))
-    .filter((card) => card.node);
-  const leftCards = orderedCards.filter((_, index) => index % 2 === 0);
-  const rightCards = orderedCards.filter((_, index) => index % 2 === 1);
+  const leftCards = activeOrder.left.map((id) => ({ id, node: cardsById[id] })).filter((card) => card.node);
+  const rightCards = activeOrder.right.map((id) => ({ id, node: cardsById[id] })).filter((card) => card.node);
 
   return (
     <div className="px-5">
