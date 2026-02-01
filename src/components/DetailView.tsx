@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ExternalLink, Calendar, Clock3, Film, Star } from "lucide-react";
+import { ExternalLink, Calendar, Clock3, Film } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -25,6 +25,7 @@ export function DetailView() {
   const posterRef = useRef<HTMLDivElement>(null);
   const [posterTilt, setPosterTilt] = useState({ x: 0, y: 0, glow: 0 });
   const [plotExpanded, setPlotExpanded] = useState(false);
+  const [posterOpen, setPosterOpen] = useState(false);
   const formatVotes = (value?: number | null) =>
     typeof value === "number" ? new Intl.NumberFormat().format(value) : "—";
   const getOmdbRating = (source: string) =>
@@ -64,7 +65,9 @@ export function DetailView() {
           <div
             className={cn(
               "text-sm font-semibold",
-              value ? "text-[var(--rating-value-color)]" : "text-muted-foreground"
+              value
+                ? "text-[var(--rating-value-color)]"
+                : "text-muted-foreground",
             )}
           >
             {value ?? emptyLabel}
@@ -79,7 +82,7 @@ export function DetailView() {
           className="h-full rounded-full shadow-[var(--rating-fill-shadow)]"
           style={{
             width: `${Math.round((ratio ?? 0) * 100)}%`,
-            background: fillGradient ?? "var(--rating-fill-gradient)"
+            background: fillGradient ?? "var(--rating-fill-gradient)",
           }}
           aria-hidden="true"
         />
@@ -147,18 +150,27 @@ export function DetailView() {
                 <div>
                   <h2 className="text-2xl font-semibold">{detail.title}</h2>
                   <div className="mt-2 flex flex-wrap gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                    <Badge variant="secondary" className="inline-flex items-center gap-2 rounded-full px-3">
+                    <Badge
+                      variant="secondary"
+                      className="inline-flex items-center gap-2 rounded-full px-3"
+                    >
                       <Film className="h-3.5 w-3.5" />
                       {detail.type}
                     </Badge>
                     {detail.year ? (
-                      <Badge variant="secondary" className="inline-flex items-center gap-2 rounded-full px-3">
+                      <Badge
+                        variant="secondary"
+                        className="inline-flex items-center gap-2 rounded-full px-3"
+                      >
                         <Calendar className="h-3.5 w-3.5" />
                         {formatYear(detail.year)}
                       </Badge>
                     ) : null}
                     {detail.runtime ? (
-                      <Badge variant="secondary" className="inline-flex items-center gap-2 rounded-full px-3">
+                      <Badge
+                        variant="secondary"
+                        className="inline-flex items-center gap-2 rounded-full px-3"
+                      >
                         <Clock3 className="h-3.5 w-3.5" />
                         {formatRuntime(detail.runtime)}
                       </Badge>
@@ -176,40 +188,49 @@ export function DetailView() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 pt-4">
-              <div
-                ref={posterRef}
-                onMouseMove={handlePosterMove}
-                onMouseLeave={handlePosterLeave}
-                className="mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out"
-                style={{
-                  transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
-                  transformStyle: "preserve-3d",
-                  boxShadow: `0 20px 50px rgba(0,0,0,0.35), 0 0 30px rgba(200,200,200,${posterTilt.glow})`
-                }}
-              >
-                <div
-                  className="relative h-full w-full overflow-hidden rounded-2xl"
-                  style={{ transform: "scale(1)", transformStyle: "preserve-3d" }}
+            <CardContent className="space-y-4 pt-5">
+              <div className="flex justify-center mb-4 pb-3">
+                <button
+                  ref={posterRef}
+                  onMouseMove={handlePosterMove}
+                  onMouseLeave={handlePosterLeave}
+                  className="block mx-auto h-[300px] w-[206px] overflow-hidden rounded-2xl bg-muted transition-transform duration-200 ease-out"
+                  style={{
+                    transform: `perspective(900px) rotateX(${posterTilt.x}deg) rotateY(${posterTilt.y}deg)`,
+                    transformStyle: "preserve-3d",
+                    boxShadow: `0 0px 30px rgba(0,0,0,0.1), 0 0 30px rgba(200,200,200,${posterTilt.glow})`,
+                  }}
+                  onClick={() => setPosterOpen(true)}
+                  type="button"
+                  aria-label="Open poster"
                 >
-                {detail.posterUrl ? (
-                  <img
-                    src={detail.posterUrl}
-                    alt={detail.title}
-                    className="h-full w-full object-cover"
-                    style={{ backfaceVisibility: "hidden" }}
-                  />
-                ) : null}
                   <div
-                    className="pointer-events-none absolute inset-0 rounded-2xl"
+                    className="relative h-full w-full overflow-hidden rounded-2xl"
                     style={{
-                      boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 35px rgba(0,0,0,0.35)"
+                      transform: "scale(1)",
+                      transformStyle: "preserve-3d",
                     }}
-                    aria-hidden="true"
-                  />
-                </div>
+                  >
+                    {detail.posterUrl ? (
+                      <img
+                        src={detail.posterUrl}
+                        alt={detail.title}
+                        className="h-full w-full object-cover"
+                        style={{ backfaceVisibility: "hidden" }}
+                      />
+                    ) : null}
+                    <div
+                      className="pointer-events-none absolute inset-0 rounded-2xl"
+                      style={{
+                        boxShadow:
+                          "inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 35px rgba(0,0,0,0.35)",
+                      }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                </button>
               </div>
-              <Separator />
+              <Separator className="my-4" />
               <div className="space-y-2 text-sm">
                 <p className="text-muted-foreground">Genres</p>
                 <div className="flex flex-wrap gap-2">
@@ -226,62 +247,39 @@ export function DetailView() {
                     : "—"}
                 </div>
               </div>
-              <Separator />
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Plot</p>
-                <p
-                  className="text-sm leading-relaxed text-foreground/90"
-                  style={{ display: "-webkit-box", WebkitLineClamp: plotExpanded ? "unset" : 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
+            <CardHeader>
+              <div className="text-sm font-semibold pb-4">Plot</div>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p
+                className="text-sm leading-relaxed text-foreground/90"
+                style={{
+                  display: "-webkit-box",
+                  WebkitLineClamp: plotExpanded ? "unset" : 4,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                }}
+              >
+                {detail.plot ?? "Plot unavailable."}
+              </p>
+              {detail.plot && detail.plot.length > 180 ? (
+                <button
+                  type="button"
+                  onClick={() => setPlotExpanded((prev) => !prev)}
+                  className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
                 >
-                  {detail.plot ?? "Plot unavailable."}
-                </p>
-                {detail.plot && detail.plot.length > 180 ? (
-                  <button
-                    type="button"
-                    onClick={() => setPlotExpanded((prev) => !prev)}
-                    className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
-                  >
-                    {plotExpanded ? "Show less" : "Show more"}
-                  </button>
-                ) : null}
-              </div>
+                  {plotExpanded ? "Show less" : "Show more"}
+                </button>
+              ) : null}
             </CardContent>
           </Card>
         </div>
 
         <div className="space-y-4 min-[650px]:col-span-1">
-          <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
-            <CardHeader>
-              <div className="text-sm font-semibold pb-4">Key Stats</div>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
-                  <Calendar className="h-4 w-4" /> Released
-                </div>
-                <div className="mt-2 text-lg font-semibold">
-                  {formatYear(detail.year)}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
-                <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
-                  <Star className="h-4 w-4" /> IMDb Rating
-                </div>
-                <div className="mt-2 text-lg font-semibold">
-                  {detail.rating ?? "—"}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-border/70 bg-[var(--card-tile-bg)] p-4 shadow-[0_6px_14px_rgba(0,0,0,0.18)]">
-                <div className="text-xs uppercase text-muted-foreground">
-                  IMDb Votes
-                </div>
-                <div className="mt-2 text-lg font-semibold">
-                  {formatVotes(detail.votes)}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-lg">
             <CardHeader>
               <div className="text-sm font-semibold pb-4">Ratings</div>
@@ -300,7 +298,9 @@ export function DetailView() {
                 detail.rating ? `${detail.rating}/10` : null,
                 parseImdbScore(detail.rating),
                 "linear-gradient(90deg, rgba(224,193,74,0.85), rgba(178,150,43,0.95))",
-                detail.votes ? `${formatVotes(detail.votes)} votes` : "No votes",
+                detail.votes
+                  ? `${formatVotes(detail.votes)} votes`
+                  : "No votes",
               )}
               {renderRatingSlider(
                 <Button
@@ -387,24 +387,41 @@ export function DetailView() {
           <div className="mx-auto w-full max-w-xl space-y-5">
             <Separator />
             <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Language</span>
-              <span>{detail.language ?? "—"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Country</span>
-              <span>{detail.country ?? "—"}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">IMDb ID</span>
-              <span className="font-mono text-xs">
-                {detail.imdbId ?? "—"}
-              </span>
-            </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Language</span>
+                <span>{detail.language ?? "—"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Country</span>
+                <span>{detail.country ?? "—"}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      {posterOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          onClick={() => setPosterOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            className="absolute right-6 top-6 rounded-full border border-white/30 bg-black/40 p-2 text-white/80 transition hover:text-white"
+            onClick={() => setPosterOpen(false)}
+            aria-label="Close poster"
+          >
+            ×
+          </button>
+          <img
+            src={detail.posterUrl ?? ""}
+            alt={detail.title}
+            className="max-h-[85vh] max-w-[85vw] rounded-2xl shadow-[0_40px_80px_rgba(0,0,0,0.6)]"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
