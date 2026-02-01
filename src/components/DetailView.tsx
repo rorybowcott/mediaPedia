@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Calendar, Clock3, Film, GripHorizontal } from "lucide-react";
+import { ChevronDown, ExternalLink, Calendar, Clock3, Film, GripHorizontal } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -27,6 +27,8 @@ export function DetailView() {
   const metadataLinkTarget = useAppStore((state) => state.metadataLinkTarget);
   const watchRegion = useAppStore((state) => state.watchRegion);
   const setWatchRegion = useAppStore((state) => state.setWatchRegion);
+  const cardCollapse = useAppStore((state) => state.cardCollapse);
+  const setCardCollapsed = useAppStore((state) => state.setCardCollapsed);
   const posterRef = useRef<HTMLDivElement>(null);
   const posterOverlayRef = useRef<HTMLImageElement>(null);
   const dragOrderRef = useRef<{ left: string[]; right: string[] } | null>(null);
@@ -119,6 +121,20 @@ export function DetailView() {
           ))}
         </div>
       </div>
+    );
+  };
+  const renderCollapseToggle = (id: string) => {
+    const isCollapsed = Boolean(cardCollapse?.[id]);
+    return (
+      <button
+        type="button"
+        onClick={() => setCardCollapsed(id, !isCollapsed)}
+        className="rounded-full border border-border/70 bg-background/40 px-2 py-1 text-xs text-muted-foreground transition hover:text-foreground"
+        aria-pressed={isCollapsed}
+        aria-label={isCollapsed ? "Expand card" : "Collapse card"}
+      >
+        <ChevronDown className={cn("h-3.5 w-3.5 transition", isCollapsed ? "" : "rotate-180")} />
+      </button>
     );
   };
   const imdbValue = detail?.rating ?? null;
@@ -425,7 +441,7 @@ export function DetailView() {
       type="button"
       data-drag-handle="true"
       onPointerDown={(event) => handleDragStart(event, id)}
-      className="group absolute left-1/2 top-2 -translate-x-1/2 cursor-grab rounded-full border border-transparent bg-transparent p-0.5 text-muted-foreground/50 transition hover:text-muted-foreground active:cursor-grabbing"
+      className="group absolute left-1/2 top-0.5 -translate-x-1/2 cursor-grab rounded-full border border-transparent bg-transparent p-0.5 text-muted-foreground/50 transition hover:text-muted-foreground active:cursor-grabbing"
       aria-label="Reorder card"
     >
       <GripHorizontal className="h-3.5 w-3.5 opacity-60 transition group-hover:opacity-90" />
@@ -440,35 +456,41 @@ export function DetailView() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-2xl font-semibold">{detail.title}</h2>
-              <div className="mt-2 flex flex-wrap gap-2 text-xs tracking-wide text-muted-foreground">
-                <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs uppercase tracking-wide text-secondary-foreground">
-                  <Film className="h-3.5 w-3.5" />
-                  {detail.type}
-                </div>
-                {detail.year ? (
-                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {formatYear(detail.year)}
-                  </div>
-                ) : null}
-                {detail.runtime ? (
+              {!cardCollapse?.poster ? (
+                <div className="mt-2 flex flex-wrap gap-2 text-xs tracking-wide text-muted-foreground">
                   <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs uppercase tracking-wide text-secondary-foreground">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    {formatRuntime(detail.runtime)}
+                    <Film className="h-3.5 w-3.5" />
+                    {detail.type}
                   </div>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => openLink(trailerUrl(detail.title, detail.year))}
-                  className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
-                >
-                  Trailers <ExternalLink className="h-3.5 w-3.5" />
-                </button>
-              </div>
+                  {detail.year ? (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {formatYear(detail.year)}
+                    </div>
+                  ) : null}
+                  {detail.runtime ? (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs uppercase tracking-wide text-secondary-foreground">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {formatRuntime(detail.runtime)}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => openLink(trailerUrl(detail.title, detail.year))}
+                    className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs tracking-wide text-secondary-foreground transition hover:bg-secondary/80"
+                  >
+                    Trailers <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <div className="mt-1">
+              {renderCollapseToggle("poster")}
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 pt-5">
+        {!cardCollapse?.poster ? (
+          <CardContent className="space-y-4 pt-5">
           <div className="flex justify-center mb-4 pb-3">
             <button
               ref={posterRef}
@@ -531,17 +553,22 @@ export function DetailView() {
                       ))
                     : "—"}
                 </div>
-              </div>
+          </div>
         </CardContent>
+        ) : null}
       </Card>
     ),
     plot: (
       <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
         <CardHeader className="relative space-y-1">
           {cardHandle("plot")}
-          <div className="text-sm font-semibold pb-4">Plot</div>
+          <div className="flex items-center justify-between gap-3 pb-4">
+            <div className="text-sm font-semibold">Plot</div>
+            {renderCollapseToggle("plot")}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm">
+        {!cardCollapse?.plot ? (
+          <CardContent className="space-y-2 text-sm">
           <p
             className="text-sm leading-relaxed text-foreground/90"
             style={{
@@ -563,15 +590,20 @@ export function DetailView() {
             </button>
           ) : null}
         </CardContent>
+        ) : null}
       </Card>
     ),
     ratings: (
       <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
         <CardHeader className="relative space-y-1">
           {cardHandle("ratings")}
-          <div className="text-sm font-semibold pb-4">Ratings</div>
+          <div className="flex items-center justify-between gap-3 pb-4">
+            <div className="text-sm font-semibold">Ratings</div>
+            {renderCollapseToggle("ratings")}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        {!cardCollapse?.ratings ? (
+          <CardContent className="space-y-3 text-sm">
           {!hasAnyRating ? (
             <div className="text-sm text-muted-foreground">No ratings available for this title yet.</div>
           ) : null}
@@ -621,6 +653,7 @@ export function DetailView() {
               )
             : null}
         </CardContent>
+        ) : null}
       </Card>
     ),
     watch: (
@@ -629,52 +662,62 @@ export function DetailView() {
           {cardHandle("watch")}
           <div className="flex items-center justify-between gap-3 pb-4">
             <div className="text-sm font-semibold">Where to watch</div>
-            <select
-              value={watchRegion}
-              onChange={(event) => setWatchRegion(event.target.value)}
-              className="rounded-full border border-border/70 bg-background/40 px-2.5 py-1 text-xs text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="GB">GB</option>
-              <option value="US">US</option>
-              <option value="CA">CA</option>
-              <option value="AU">AU</option>
-              <option value="IE">IE</option>
-              <option value="NZ">NZ</option>
-              <option value="FR">FR</option>
-              <option value="DE">DE</option>
-              <option value="ES">ES</option>
-              <option value="IT">IT</option>
-              <option value="NL">NL</option>
-              <option value="SE">SE</option>
-              <option value="NO">NO</option>
-              <option value="DK">DK</option>
-              <option value="BR">BR</option>
-              <option value="IN">IN</option>
-              <option value="JP">JP</option>
-              <option value="KR">KR</option>
-            </select>
+            {renderCollapseToggle("watch")}
           </div>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          {!hasWatchProviders ? (
-            <div className="text-sm text-muted-foreground">No watch providers found for this title.</div>
-          ) : (
-            <>
-              {renderProviderGroup("Stream", watchProviders?.flatrate, watchProviders?.link)}
-              {renderProviderGroup("Rent", watchProviders?.rent, watchProviders?.link)}
-              {renderProviderGroup("Buy", watchProviders?.buy, watchProviders?.link)}
-            </>
-          )}
-        </CardContent>
+        {!cardCollapse?.watch ? (
+          <CardContent className="space-y-4 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Region</div>
+              <select
+                value={watchRegion}
+                onChange={(event) => setWatchRegion(event.target.value)}
+                className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs text-foreground shadow-sm transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="GB">GB</option>
+                <option value="US">US</option>
+                <option value="CA">CA</option>
+                <option value="AU">AU</option>
+                <option value="IE">IE</option>
+                <option value="NZ">NZ</option>
+                <option value="FR">FR</option>
+                <option value="DE">DE</option>
+                <option value="ES">ES</option>
+                <option value="IT">IT</option>
+                <option value="NL">NL</option>
+                <option value="SE">SE</option>
+                <option value="NO">NO</option>
+                <option value="DK">DK</option>
+                <option value="BR">BR</option>
+                <option value="IN">IN</option>
+                <option value="JP">JP</option>
+                <option value="KR">KR</option>
+              </select>
+            </div>
+            {!hasWatchProviders ? (
+              <div className="text-sm text-muted-foreground">No watch providers found for this title.</div>
+            ) : (
+              <>
+                {renderProviderGroup("Stream", watchProviders?.flatrate, watchProviders?.link)}
+                {renderProviderGroup("Rent", watchProviders?.rent, watchProviders?.link)}
+                {renderProviderGroup("Buy", watchProviders?.buy, watchProviders?.link)}
+              </>
+            )}
+          </CardContent>
+        ) : null}
       </Card>
     ),
     people: (
       <Card className="border-border/70 bg-[linear-gradient(180deg,var(--card-gradient-top),var(--card-gradient-bottom))] shadow-[0_18px_32px_rgba(0,0,0,0.14)]">
         <CardHeader className="relative space-y-1">
           {cardHandle("people")}
-          <div className="text-sm font-semibold pb-4">People</div>
+          <div className="flex items-center justify-between gap-3 pb-4">
+            <div className="text-sm font-semibold">People</div>
+            {renderCollapseToggle("people")}
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm">
+        {!cardCollapse?.people ? (
+          <CardContent className="space-y-4 text-sm">
           <div>
             <p className="text-muted-foreground">Director</p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -712,6 +755,7 @@ export function DetailView() {
             </div>
           </div>
         </CardContent>
+        ) : null}
       </Card>
     ),
   };

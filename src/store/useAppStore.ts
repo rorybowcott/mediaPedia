@@ -65,6 +65,7 @@ interface AppState {
   theme: "light" | "dark";
   metadataLinkTarget: "imdb" | "rotten" | "metacritic";
   watchRegion: string;
+  cardCollapse: Record<string, boolean>;
   detailCardOrder: DetailCardOrder;
   trending: TrendingSeed[];
   localTitles: TitleRecord[];
@@ -89,6 +90,7 @@ interface AppState {
   setTheme: (value: "light" | "dark") => Promise<void>;
   setMetadataLinkTarget: (value: "imdb" | "rotten" | "metacritic") => Promise<void>;
   setWatchRegion: (value: string) => Promise<void>;
+  setCardCollapsed: (id: string, value: boolean) => Promise<void>;
   setDetailCardOrder: (value: DetailCardOrder) => Promise<void>;
   refreshTrending: () => Promise<void>;
   rebuildIndex: () => Promise<void>;
@@ -185,6 +187,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   theme: "dark",
   metadataLinkTarget: "imdb",
   watchRegion: "GB",
+  cardCollapse: { watch: false },
   detailCardOrder: DEFAULT_DETAIL_CARD_ORDER,
   trending: [],
   localTitles: [],
@@ -216,6 +219,23 @@ export const useAppStore = create<AppState>((set, get) => ({
         : "imdb";
     const storedWatchRegion = await getSetting("watch_region");
     const watchRegion = storedWatchRegion ? storedWatchRegion.trim().toUpperCase() : "GB";
+    const storedCardCollapse = await getSetting("detail_card_collapsed");
+    let cardCollapse: Record<string, boolean> = { watch: false };
+    if (storedCardCollapse) {
+      try {
+        const parsed = JSON.parse(storedCardCollapse) as Record<string, boolean>;
+        if (parsed && typeof parsed === "object") {
+          cardCollapse = { ...cardCollapse, ...parsed };
+        }
+      } catch {
+        cardCollapse = { watch: false };
+      }
+    } else {
+      const legacyWatchCollapsed = await getSetting("watch_providers_collapsed");
+      if (legacyWatchCollapsed) {
+        cardCollapse = { watch: legacyWatchCollapsed === "true" };
+      }
+    }
     const storedCardOrder = await getSetting("detail_card_order");
     const detailCardOrder = parseDetailCardOrder(storedCardOrder);
     set({
@@ -227,6 +247,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       theme,
       metadataLinkTarget,
       watchRegion,
+      cardCollapse,
       detailCardOrder
     });
     get().rebuildIndex();
@@ -506,6 +527,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().view === "detail") {
       await get().refreshDetails();
     }
+  },
+  setCardCollapsed: async (id, value) => {
+    const current = get().cardCollapse;
+    const next = { ...current, [id]: value };
+    await setSetting("detail_card_collapsed", JSON.stringify(next));
+    set({ cardCollapse: next });
   },
   setDetailCardOrder: async (value) => {
     const normalized = normalizeDetailCardOrder(value);
